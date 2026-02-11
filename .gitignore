@@ -1,0 +1,27 @@
+.data/
+models/ace-step-1.5/checkpoints/
+models/ace-step-1.5/cache/
+.DS_Store
+.env
+.env.*
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Backend runtime data
+backend/.data/
+
+# Node / Frontend
+node_modules/
+dist/
+.turbo/
+.vite/
+
+
