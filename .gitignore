@@ -23,5 +23,6 @@ node_modules/
 dist/
 .turbo/
 .vite/
-
+.home/
+*.cache/
 
