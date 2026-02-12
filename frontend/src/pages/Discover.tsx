@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 
@@ -36,6 +36,10 @@ export default function Discover() {
   const [error, setError] = useState<string | null>(null);
   const [optimistic, setOptimistic] = useState<Record<string, { like_count: number; liked_by_me: boolean }>>({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const [activeSongId, setActiveSongId] = useState<string | null>(null);
+  const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [addingToId, setAddingToId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -91,6 +95,38 @@ export default function Discover() {
           return next;
         });
       });
+  };
+
+  const openPlaylistPicker = async (songId: string) => {
+    setError(null);
+    setActiveSongId((current) => (current === songId ? null : songId));
+
+    // Lazy-load playlists the first time they are needed
+    if (playlists === null) {
+      try {
+        setPlaylistsLoading(true);
+        const list = await api.listPlaylists();
+        setPlaylists(list);
+      } catch (e: any) {
+        setError(e?.message || "Failed to load playlists");
+      } finally {
+        setPlaylistsLoading(false);
+      }
+    }
+  };
+
+  const handleAddToPlaylist = async (playlistId: string, songId: string) => {
+    setError(null);
+    try {
+      setAddingToId(playlistId);
+      await api.addSongToPlaylist(playlistId, songId);
+      // Close picker after successful add
+      setActiveSongId(null);
+    } catch (e: any) {
+      setError(e?.message || "Failed to add to playlist");
+    } finally {
+      setAddingToId(null);
+    }
   };
 
   const songs = getSongsForView();
@@ -199,13 +235,54 @@ export default function Discover() {
                     >
                       {isLoading ? "…" : state.liked_by_me ? "Liked" : "Like"}
                     </button>
-                    <Link
-                      to={`/songs/${s.id}`}
-                      className="rounded-full border border-white/30 bg-white/5 px-3 py-1 text-xs text-white hover:border-white/60"
+                    <button
+                      type="button"
+                      className={`flex h-8 w-8 items-center justify-center rounded-full border px-0 text-sm transition ${
+                        activeSongId === s.id
+                          ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                          : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
+                      }`}
+                      onClick={() => openPlaylistPicker(s.id)}
+                      aria-label="Add to playlist"
                     >
-                      View details
-                    </Link>
+                      <span className="text-base leading-none">+</span>
+                    </button>
                   </div>
+
+                  {activeSongId === s.id && (
+                    <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
+                      {playlistsLoading ? (
+                        <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
+                      ) : playlists && playlists.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
+                            Add to playlist:
+                          </span>
+                          {playlists.map((pl) => (
+                            <button
+                              key={pl.id}
+                              type="button"
+                              className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={addingToId === pl.id}
+                              onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                            >
+                              {addingToId === pl.id ? "Adding…" : pl.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>You don&apos;t have any playlists yet.</span>
+                          <Link
+                            to="/playlists"
+                            className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                          >
+                            Create a playlist
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

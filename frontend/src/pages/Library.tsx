@@ -197,7 +197,7 @@ export default function Library() {
                     onClick={() => openFavoritePicker(s.id)}
                     aria-label="Add to playlist"
                   >
-                    <span className="text-base leading-none">♥</span>
+                    <span className="text-base leading-none">+</span>
                   </button>
                   <button
                     className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"

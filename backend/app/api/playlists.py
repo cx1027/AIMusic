@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.api.deps import get_current_user, get_db
@@ -66,7 +67,13 @@ def get_playlist(
 
     songs_by_id: dict[UUID, Song] = {}
     if song_ids:
-        songs = db.exec(select(Song).where(Song.id.in_(song_ids), Song.user_id == user.id)).all()
+        # Get all songs in the playlist: user's own songs or public songs from others
+        songs = db.exec(
+            select(Song).where(
+                Song.id.in_(song_ids),
+                or_(Song.user_id == user.id, Song.is_public.is_(True))
+            )
+        ).all()
         songs_by_id = {s.id: s for s in songs}
 
     ordered_songs: list[SongPublic] = []
@@ -131,8 +138,11 @@ def add_song_to_playlist(
     playlist = _get_user_playlist(db, user, playlist_id)
 
     song = db.get(Song, song_id)
-    if not song or song.user_id != user.id:
+    if not song:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+    # Allow adding own songs or public songs from other users
+    if song.user_id != user.id and not song.is_public:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Song is not public")
 
     existing = db.get(PlaylistSong, (playlist.id, song.id))
     if existing:
