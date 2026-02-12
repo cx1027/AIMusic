@@ -16,7 +16,7 @@ class User(SQLModel, table=True):
     password_hash: str
 
     subscription_tier: str = Field(default="free", index=True)
-    credits_balance: int = Field(default=100)
+    credits_balance: int = Field(default=1000)
 
     avatar_url: Optional[str] = None
     details: Optional[str] = Field(default="")

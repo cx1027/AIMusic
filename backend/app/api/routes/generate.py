@@ -56,12 +56,13 @@ def create_generation(
     if lyrics is not None:
         lyrics = str(lyrics)
 
-    # Simple credits gate for MVP
-    if user.credits_balance <= 0:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Insufficient credits")
-    user.credits_balance -= 1
+    # Simple credits gate for MVP - each song costs 2 credits
+    if user.credits_balance < 2:
+        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Insufficient credits. Each song costs 2 credits.")
+    user.credits_balance -= 2
     db.add(user)
     db.commit()
+    db.refresh(user)  # Ensure user object is refreshed with updated credits
 
     task_id = str(uuid4())
     init_task(
