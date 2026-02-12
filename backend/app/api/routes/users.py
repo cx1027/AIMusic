@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db
@@ -36,15 +37,42 @@ def update_me(
         user.email = normalized_email
     
     if payload.username is not None:
-        user.username = payload.username.strip()
+        normalized_username = payload.username.strip()
+        # Check if username is already taken by another user
+        sql_query = text("SELECT id FROM users WHERE TRIM(username) = TRIM(:username) AND id != :user_id LIMIT 1")
+        result = db.execute(sql_query, {"username": normalized_username, "user_id": user.id})
+        row = result.fetchone()
+        if row:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
+        user.username = normalized_username
     
     if payload.details is not None:
         user.details = payload.details.strip() if payload.details else ""
     
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    return UserPublic.model_validate(user, from_attributes=True)
+    try:
+        db.commit()
+        db.refresh(user)
+        return UserPublic.model_validate(user, from_attributes=True)
+    except IntegrityError as e:
+        db.rollback()
+        error_str = str(e).lower()
+        # Check if it's a unique constraint violation on email
+        if "email" in error_str and "unique" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        # Check if it's a unique constraint violation on username
+        if "username" in error_str and "unique" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Update failed due to database constraint violation"
+        )
 
 
 @router.post("/{user_id}/follow")

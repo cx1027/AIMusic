@@ -25,9 +25,10 @@ router = APIRouter()
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> UserPublic:
     try:
         normalized_email = payload.email.lower().strip()
-        logger.info(f"Registration attempt for email: {normalized_email}, username: {payload.username}")
+        normalized_username = payload.username.strip()
+        logger.info(f"Registration attempt for email: {normalized_email}, username: {normalized_username}")
         
-        # Use raw SQL query directly
+        # Check for duplicate email
         sql_query = text("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email)) LIMIT 1")
         result = db.execute(sql_query, {"email": normalized_email})
         row = result.fetchone()
@@ -36,16 +37,21 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> UserPublic:
             user_id = row[0]
             existing = db.get(User, user_id)
             logger.warning(f"User already exists with email: {normalized_email}, user_id: {user_id}")
-        else:
-            existing = None
+            if existing:
+                logger.warning(f"Registration rejected: Email {normalized_email} already registered")
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
         
-        if existing:
-            logger.warning(f"Registration rejected: Email {normalized_email} already registered")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        # Check for duplicate username
+        sql_query = text("SELECT id FROM users WHERE TRIM(username) = TRIM(:username) LIMIT 1")
+        result = db.execute(sql_query, {"username": normalized_username})
+        row = result.fetchone()
+        if row:
+            logger.warning(f"Registration rejected: Username {normalized_username} already taken")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
         
         user = User(
             email=normalized_email,
-            username=payload.username.strip(),
+            username=normalized_username,
             password_hash=hash_password(payload.password),
         )
         db.add(user)
@@ -58,10 +64,17 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> UserPublic:
             db.rollback()
             logger.warning(f"Database integrity error during registration for {normalized_email}: {str(e)}")
             # Check if it's a unique constraint violation on email
-            if "email" in str(e).lower() or "unique" in str(e).lower():
+            error_str = str(e).lower()
+            if "email" in error_str and "unique" in error_str:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Email already registered"
+                )
+            # Check if it's a unique constraint violation on username
+            if "username" in error_str and "unique" in error_str:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already taken"
                 )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
