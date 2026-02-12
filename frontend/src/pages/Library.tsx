@@ -9,6 +9,7 @@ export default function Library() {
   const [songs, setSongs] = useState<SongRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [genre, setGenre] = useState("");
   const [order, setOrder] = useState<"newest" | "oldest" | "popular">("newest");
@@ -87,11 +88,33 @@ export default function Library() {
                 </Link>
                 <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleString()}</div>
               </div>
-              {s.audio_url ? (
-                <audio controls src={resolveMediaUrl(s.audio_url) ?? undefined} />
-              ) : (
-                <div className="text-xs text-gray-500">No audio</div>
-              )}
+              <div className="flex items-center gap-3">
+                {s.audio_url ? (
+                  <audio controls src={resolveMediaUrl(s.audio_url) ?? undefined} />
+                ) : (
+                  <div className="text-xs text-gray-500">No audio</div>
+                )}
+                <button
+                  className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={deletingId === s.id}
+                  onClick={async () => {
+                    setErr(null);
+                    const ok = window.confirm(`Delete "${s.title}"? This can't be undone.`);
+                    if (!ok) return;
+                    try {
+                      setDeletingId(s.id);
+                      await api.deleteSong(s.id);
+                      setSongs((prev) => prev.filter((x) => x.id !== s.id));
+                    } catch (e: any) {
+                      setErr(e?.message || "Failed to delete song");
+                    } finally {
+                      setDeletingId(null);
+                    }
+                  }}
+                >
+                  {deletingId === s.id ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </div>
           ))}
         </div>

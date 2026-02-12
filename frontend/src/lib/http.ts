@@ -54,6 +54,10 @@ export async function authedHttp<T>(path: string, init?: RequestInit, opts?: { r
       const retryHeaders: HeadersInit = mergeHeaders(headers, { Authorization: `Bearer ${access}` });
       const retryRes = await fetch(`${API_BASE}${path}`, { ...init, headers: retryHeaders });
       if (!retryRes.ok) throw new Error(await parseError(retryRes));
+      if (retryRes.status === 204 || retryRes.status === 205) {
+        // No content to parse
+        return undefined as T;
+      }
       return (await retryRes.json()) as T;
     } catch (e) {
       clearTokens();
@@ -62,6 +66,10 @@ export async function authedHttp<T>(path: string, init?: RequestInit, opts?: { r
   }
 
   if (!res.ok) throw new Error(await parseError(res));
+  if (res.status === 204 || res.status === 205) {
+    // No content to parse
+    return undefined as T;
+  }
   return (await res.json()) as T;
 }
 

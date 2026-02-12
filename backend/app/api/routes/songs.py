@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.api.deps import get_current_user, get_db
+from app.models.playlist_song import PlaylistSong
 from app.models.song import Song, SongCreate, SongPublic
 from app.models.song_like import SongLike
 from app.models.user import User
@@ -135,5 +136,28 @@ def toggle_like_song(
     db.refresh(song)
 
     return {"song_id": song.id, "liked": liked, "like_count": song.like_count}
+
+
+@router.delete("/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_song(
+    song_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    song = db.get(Song, song_id)
+    if not song or song.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+
+    # Remove associations first to avoid FK constraint issues.
+    links = db.exec(select(PlaylistSong).where(PlaylistSong.song_id == song_id)).all()
+    for link in links:
+        db.delete(link)
+
+    likes = db.exec(select(SongLike).where(SongLike.song_id == song_id)).all()
+    for like in likes:
+        db.delete(like)
+
+    db.delete(song)
+    db.commit()
 
 

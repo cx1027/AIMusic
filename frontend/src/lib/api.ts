@@ -59,6 +59,10 @@ export const api = {
     like_count: number;
     created_at: string;
   }>(`/api/songs/${songId}`),
+  deleteSong: (songId: string) =>
+    authedHttp<void>(`/api/songs/${songId}`, {
+      method: "DELETE"
+    }),
   toggleLikeSong: (songId: string) =>
     authedHttp<{ song_id: string; liked: boolean; like_count: number }>(`/api/songs/${songId}/like`, {
       method: "POST"
