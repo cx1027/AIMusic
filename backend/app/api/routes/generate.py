@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any, AsyncGenerator, Dict, Optional
 from uuid import uuid4
 
@@ -76,29 +77,47 @@ async def generation_events(
 ) -> EventSourceResponse:
     async def event_gen() -> AsyncGenerator[dict, None]:
         last_payload: Optional[str] = None
-        while True:
-            if await request.is_disconnected():
-                break
+        max_wait_seconds = 300  # 5 minutes timeout
+        start_time = time.time()
+        
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
 
-            state = get_task(task_id)
-            if state is None:
-                yield {"event": "error", "data": json.dumps({"detail": "task not found"})}
-                break
+                # Timeout check
+                elapsed = time.time() - start_time
+                if elapsed > max_wait_seconds:
+                    yield {"event": "error", "data": json.dumps({"detail": "timeout waiting for task completion"})}
+                    break
 
-            # Basic ownership check
-            if str(state.get("user_id")) != str(user.id):
-                yield {"event": "error", "data": json.dumps({"detail": "not found"})}
-                break
+                try:
+                    state = get_task(task_id)
+                except Exception as e:
+                    yield {"event": "error", "data": json.dumps({"detail": f"failed to get task: {str(e)}"})}
+                    break
 
-            data = json.dumps(state, ensure_ascii=False)
-            if data != last_payload:
-                yield {"event": "progress", "data": data}
-                last_payload = data
+                if state is None:
+                    yield {"event": "error", "data": json.dumps({"detail": "task not found"})}
+                    break
 
-            if state.get("status") in ("completed", "failed"):
-                break
+                # Basic ownership check
+                if str(state.get("user_id")) != str(user.id):
+                    yield {"event": "error", "data": json.dumps({"detail": "not found"})}
+                    break
 
-            await asyncio.sleep(1.0)
+                data = json.dumps(state, ensure_ascii=False)
+                # Always yield on first iteration, then only when state changes
+                if last_payload is None or data != last_payload:
+                    yield {"event": "progress", "data": data}
+                    last_payload = data
+
+                if state.get("status") in ("completed", "failed"):
+                    break
+
+                await asyncio.sleep(1.0)
+        except Exception as e:
+            yield {"event": "error", "data": json.dumps({"detail": f"unexpected error: {str(e)}"})}
 
     return EventSourceResponse(event_gen())
 

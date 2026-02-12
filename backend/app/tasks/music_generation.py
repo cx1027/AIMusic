@@ -5,6 +5,9 @@ from uuid import UUID
 from sqlmodel import Session
 
 from app.core.database import engine
+from app.models.user import User  # noqa: F401 - needed for foreign key resolution
+from app.models.playlist_song import PlaylistSong  # noqa: F401 - needed for relationship resolution
+from app.models.playlist import Playlist  # noqa: F401 - needed for relationship resolution
 from app.models.song import Song
 from app.services.music_gen_service import generate_music
 from app.services.progress_service import update_task
