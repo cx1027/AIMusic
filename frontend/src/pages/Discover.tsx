@@ -245,7 +245,7 @@ export default function Discover() {
                           className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-emerald-400 hover:text-emerald-200"
                           onClick={() => handlePlaySong(s)}
                         >
-                          Play
+                          {isPlaying ? "Playing" : "Play"}
                         </button>
                       ) : (
                         <div className="text-xs text-gray-500">No audio</div>
