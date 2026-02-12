@@ -1,22 +1,35 @@
 from __future__ import annotations
 
+import bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from jose import jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt. Passwords longer than 72 bytes are truncated."""
+    # Convert password to bytes
+    password_bytes = password.encode('utf-8')
+    # Bcrypt has a 72-byte limit, so truncate if necessary
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    # Generate salt and hash
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    """Verify a password against a bcrypt hash."""
+    password_bytes = password.encode('utf-8')
+    # Truncate if necessary for verification
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    hash_bytes = password_hash.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hash_bytes)
 
 
 def create_access_token(*, subject: str, extra: Optional[Dict[str, Any]] = None) -> str:

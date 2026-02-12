@@ -1,5 +1,6 @@
 export { API_BASE } from "./http";
 import { authedHttp } from "./http";
+import { http } from "../api/client";
 
 type ListSongsParams = {
   q?: string;
@@ -25,12 +26,12 @@ export type PlaylistWithSongs = Playlist & {
 
 export const api = {
   register: (email: string, username: string, password: string) =>
-    authedHttp<{ id: string; email: string; username: string }>(`/api/auth/register`, {
+    http<{ id: string; email: string; username: string }>(`/api/auth/register`, {
       method: "POST",
       body: JSON.stringify({ email, username, password })
     }),
   login: (email: string, password: string) =>
-    authedHttp<{ access_token: string; refresh_token: string; token_type: string }>(`/api/auth/login`, {
+    http<{ access_token: string; refresh_token: string; token_type: string }>(`/api/auth/login`, {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
+from pydantic import ConfigDict
+from sqlmodel import Field, SQLModel
+from sqlalchemy.orm import relationship
 
 from .playlist_song import PlaylistSong
+
+if TYPE_CHECKING:
+    from .song import Song
 
 
 class PlaylistBase(SQLModel):
@@ -16,19 +21,18 @@ class PlaylistBase(SQLModel):
 
 class Playlist(PlaylistBase, table=True):
     __tablename__ = "playlists"
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(index=True, foreign_key="users.id")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    # Relationships
-    songs: list["Song"] = Relationship(
+    # Relationship - using ClassVar to prevent SQLModel from treating it as a column
+    songs: ClassVar[Any] = relationship(
+        "Song",
+        secondary="playlist_songs",
         back_populates="playlists",
-        link_model=PlaylistSong,
-        sa_relationship_kwargs={
-            "order_by": "PlaylistSong.position",
-            "lazy": "selectin",
-        },
+        lazy="selectin"
     )
 
 
