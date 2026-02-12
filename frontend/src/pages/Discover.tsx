@@ -40,6 +40,7 @@ export default function Discover() {
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [addingToId, setAddingToId] = useState<string | null>(null);
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -50,6 +51,23 @@ export default function Discover() {
       .catch((e: any) => setError(e?.message || "Failed to load discover feed"))
       .finally(() => setLoading(false));
   }, [genre]);
+
+  // Subscribe to player store to track currently playing song
+  useEffect(() => {
+    const updateCurrentPlaying = () => {
+      const state = playerStore.getState();
+      const currentSong = state.currentIndex >= 0 && state.queue[state.currentIndex] 
+        ? state.queue[state.currentIndex] 
+        : null;
+      setCurrentPlayingId(currentSong?.id || null);
+    };
+    
+    updateCurrentPlaying();
+    const unsubscribe = playerStore.subscribe(updateCurrentPlaying);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const getSongsForView = (): DiscoverSong[] => {
     if (!data) return [];
@@ -190,11 +208,16 @@ export default function Discover() {
             {songs.map((s) => {
               const state = optimistic[s.id] ?? { like_count: s.like_count, liked_by_me: s.liked_by_me };
               const isLoading = loadingIds.has(s.id);
+              const isPlaying = currentPlayingId === s.id;
 
               return (
                 <div
                   key={s.id}
-                  className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3"
+                  className={`space-y-2 rounded-lg border p-3 ${
+                    isPlaying 
+                      ? "border-pink-400/60 bg-pink-500/10" 
+                      : "border-white/10 bg-black/20"
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">

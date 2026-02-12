@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { playerStore, type PlayerState, type QueueItem } from "../../stores/playerStore";
 
 type LocalState = PlayerState & {
@@ -92,6 +93,14 @@ export default function GlobalPlayer() {
     }
   };
 
+  const handleClose = () => {
+    playerStore.setQueue([]);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+  };
+
   if (!state.currentItem) {
     return null;
   }
@@ -106,13 +115,21 @@ export default function GlobalPlayer() {
   };
 
   return (
-    <div className="sticky bottom-0 z-30 border-t border-white/10 bg-black/80 backdrop-blur">
+    <div className="sticky bottom-0 z-30 border-t border-white/10 bg-black/80 backdrop-blur relative">
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         className="hidden"
       />
+      <button
+        type="button"
+        onClick={handleClose}
+        className="absolute right-4 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-gray-300 hover:border-white/60 hover:text-white"
+        aria-label="Close player"
+      >
+        <X className="h-4 w-4" />
+      </button>
       <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 text-sm text-gray-100">
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs uppercase tracking-wide text-gray-400">

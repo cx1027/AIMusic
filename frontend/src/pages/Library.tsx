@@ -19,6 +19,7 @@ export default function Library() {
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [updatingVisibilityId, setUpdatingVisibilityId] = useState<string | null>(null);
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
   const handlePlaySong = (song: SongRow) => {
     if (!song.audio_url) return;
@@ -61,6 +62,23 @@ export default function Library() {
       .catch((e: any) => setErr(e?.message || "Failed to load songs"))
       .finally(() => setLoading(false));
   }, [q, genre, order]);
+
+  // Subscribe to player store to track currently playing song
+  useEffect(() => {
+    const updateCurrentPlaying = () => {
+      const state = playerStore.getState();
+      const currentSong = state.currentIndex >= 0 && state.queue[state.currentIndex] 
+        ? state.queue[state.currentIndex] 
+        : null;
+      setCurrentPlayingId(currentSong?.id || null);
+    };
+    
+    updateCurrentPlaying();
+    const unsubscribe = playerStore.subscribe(updateCurrentPlaying);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const openFavoritePicker = async (songId: string) => {
     setErr(null);
@@ -147,10 +165,16 @@ export default function Library() {
         {!loading && !err && songs.length === 0 ? <div className="mt-2 text-gray-400">No songs yet.</div> : null}
 
         <div className="mt-4 grid gap-3">
-          {songs.map((s) => (
+          {songs.map((s) => {
+            const isPlaying = currentPlayingId === s.id;
+            return (
             <div
               key={s.id}
-              className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3"
+              className={`space-y-2 rounded-lg border p-3 ${
+                isPlaying 
+                  ? "border-pink-400/60 bg-pink-500/10" 
+                  : "border-white/10 bg-black/20"
+              }`}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -257,7 +281,8 @@ export default function Library() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

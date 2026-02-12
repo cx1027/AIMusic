@@ -14,6 +14,7 @@ export default function PlaylistsPage() {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [removingSongId, setRemovingSongId] = useState<string | null>(null);
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
   const loadPlaylists = () => {
     setLoading(true);
@@ -43,6 +44,23 @@ export default function PlaylistsPage() {
       .then(setSelected)
       .catch((e: any) => setErr(e?.message || "Failed to load playlist detail"));
   }, [selectedId]);
+
+  // Subscribe to player store to track currently playing song
+  useEffect(() => {
+    const updateCurrentPlaying = () => {
+      const state = playerStore.getState();
+      const currentSong = state.currentIndex >= 0 && state.queue[state.currentIndex] 
+        ? state.queue[state.currentIndex] 
+        : null;
+      setCurrentPlayingId(currentSong?.id || null);
+    };
+    
+    updateCurrentPlaying();
+    const unsubscribe = playerStore.subscribe(updateCurrentPlaying);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -236,8 +254,17 @@ export default function PlaylistsPage() {
                 )}
                 {selected.songs.length > 0 && (
                   <ul className="divide-y divide-white/5">
-                    {selected.songs.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between py-2">
+                    {selected.songs.map((s) => {
+                      const isPlaying = currentPlayingId === s.id;
+                      return (
+                      <li 
+                        key={s.id} 
+                        className={`flex items-center justify-between py-2 px-2 rounded-md ${
+                          isPlaying 
+                            ? "bg-pink-500/10 border border-pink-400/60" 
+                            : ""
+                        }`}
+                      >
                         <div>
                           <div className="text-sm font-medium">{s.title}</div>
                           <div className="text-xs text-gray-400">
@@ -266,7 +293,8 @@ export default function PlaylistsPage() {
                           </button>
                         </div>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </div>
