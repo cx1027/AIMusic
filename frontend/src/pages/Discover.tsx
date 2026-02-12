@@ -197,7 +197,7 @@ export default function Discover() {
                   className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <Link to={`/songs/${s.id}`} className="truncate text-gray-100 hover:underline">
                         {s.title || "Untitled"}
                       </Link>
@@ -215,44 +215,39 @@ export default function Discover() {
                         {new Date(s.created_at).toLocaleString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-300">
-                      <span>❤️ {state.like_count}</span>
-                      <span>▶️ {s.play_count}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 text-xs">
-                    {s.audio_url ? (
+                    <div className="flex items-center gap-2 text-xs">
+                      {s.audio_url ? (
+                        <button
+                          type="button"
+                          className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-emerald-400 hover:text-emerald-200"
+                          onClick={() => handlePlaySong(s)}
+                        >
+                          Play
+                        </button>
+                      ) : (
+                        <div className="text-xs text-gray-500">No audio</div>
+                      )}
                       <button
                         type="button"
-                        className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-emerald-400 hover:text-emerald-200"
-                        onClick={() => handlePlaySong(s)}
+                        onClick={() => handleLike(s)}
+                        disabled={isLoading}
+                        className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Play
+                        {isLoading ? "…" : state.liked_by_me ? "Liked" : "Like"} {state.like_count}
                       </button>
-                    ) : (
-                      <div className="text-xs text-gray-500">No audio</div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleLike(s)}
-                      disabled={isLoading}
-                      className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isLoading ? "…" : state.liked_by_me ? "Liked" : "Like"}
-                    </button>
-                    <button
-                      type="button"
-                      className={`flex h-8 w-8 items-center justify-center rounded-full border px-0 text-sm transition ${
-                        activeSongId === s.id
-                          ? "border-blue-400 bg-blue-500/20 text-blue-200"
-                          : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
-                      }`}
-                      onClick={() => openPlaylistPicker(s.id)}
-                      aria-label="Add to playlist"
-                    >
-                      <span className="text-base leading-none">+</span>
-                    </button>
+                      <button
+                        type="button"
+                        className={`flex h-8 w-8 items-center justify-center rounded-full border px-0 text-sm transition ${
+                          activeSongId === s.id
+                            ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                            : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
+                        }`}
+                        onClick={() => openPlaylistPicker(s.id)}
+                        aria-label="Add to playlist"
+                      >
+                        <span className="text-base leading-none">+</span>
+                      </button>
+                    </div>
                   </div>
 
                   {activeSongId === s.id && (
