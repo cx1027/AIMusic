@@ -43,6 +43,11 @@ class RefreshRequest(SQLModel):
     refresh_token: str
 
 
+class UserUpdate(SQLModel):
+    email: Optional[str] = None
+    username: Optional[str] = None
+
+
 class UserPublic(SQLModel):
     id: UUID
     email: str
@@ -50,6 +55,15 @@ class UserPublic(SQLModel):
     avatar_url: Optional[str] = None
     subscription_tier: str
     credits_balance: int
+    created_at: datetime
+
+
+class UserPublicProfile(SQLModel):
+    """Public profile without sensitive information like email and credits."""
+    id: UUID
+    username: str
+    avatar_url: Optional[str] = None
+    subscription_tier: str
     created_at: datetime
 
 

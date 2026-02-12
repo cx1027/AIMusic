@@ -1,10 +1,25 @@
+import { useEffect, useState } from "react";
 import { useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearTokens, getAccessToken, subscribeAuth } from "../../lib/auth";
+import { api } from "../../lib/api";
 
 export default function Header() {
   const nav = useNavigate();
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, () => null);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (token) {
+      api
+        .me()
+        .then((u) => setUsername(u.username))
+        .catch(() => setUsername(null));
+    } else {
+      setUsername(null);
+    }
+  }, [token]);
+
   return (
     <div className="border-b border-white/10 bg-black/20">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
@@ -38,7 +53,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link className="hover:text-white" to="/profile">
+              <Link className="hover:text-white" to={username ? `/profile/${username}` : "/profile"}>
                 Profile
               </Link>
               <button

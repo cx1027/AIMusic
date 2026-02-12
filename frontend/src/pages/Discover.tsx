@@ -202,7 +202,13 @@ export default function Discover() {
                         {s.title || "Untitled"}
                       </Link>
                       <div className="mt-1 text-xs text-gray-400">
-                        by <span className="font-medium text-gray-200">@{s.username}</span>{" "}
+                        by{" "}
+                        <Link
+                          to={`/profile/${s.username}`}
+                          className="font-medium text-gray-200 hover:text-white hover:underline"
+                        >
+                          @{s.username}
+                        </Link>{" "}
                         · {s.genre ? <span className="uppercase">{s.genre}</span> : "No genre"}
                       </div>
                       <div className="mt-0.5 text-[11px] text-gray-500">

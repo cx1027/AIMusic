@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, or_
 from sqlmodel import Session, select
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_current_user_optional, get_db
 from app.models.playlist_song import PlaylistSong
 from app.models.song import Song, SongCreate, SongPublic
 from app.models.song_like import SongLike
@@ -180,5 +180,41 @@ def delete_song(
 
     db.delete(song)
     db.commit()
+
+
+@router.get("/user/{user_id}/public", response_model=list[SongPublic])
+def get_public_songs_by_user(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+) -> list[SongPublic]:
+    """Get all public songs by a specific user."""
+    songs = db.exec(
+        select(Song)
+        .where(Song.user_id == user_id, Song.is_public.is_(True))
+        .order_by(Song.created_at.desc())
+    ).all()
+    
+    if not songs:
+        return []
+    
+    # Preload like state for current user if authenticated
+    song_ids = [s.id for s in songs]
+    liked_ids: set[UUID] = set()
+    if current_user:
+        likes = db.exec(
+            select(SongLike.song_id).where(
+                SongLike.user_id == current_user.id,
+                SongLike.song_id.in_(song_ids),
+            )
+        ).all()
+        liked_ids = set(likes)
+    
+    out: list[SongPublic] = []
+    for s in songs:
+        sp = SongPublic.model_validate(s, from_attributes=True)
+        sp.liked_by_me = s.id in liked_ids
+        out.append(sp)
+    return out
 
 

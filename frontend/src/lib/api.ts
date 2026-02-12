@@ -36,6 +36,15 @@ export const api = {
       body: JSON.stringify({ email, password })
     }),
   me: () => authedHttp<{ id: string; email: string; username: string; credits_balance: number }>(`/api/users/me`),
+  getUserByUsername: (username: string) =>
+    http<{ id: string; username: string; avatar_url?: string | null; subscription_tier: string; created_at: string }>(
+      `/api/users/username/${encodeURIComponent(username)}`
+    ),
+  updateUser: (payload: { email?: string; username?: string }) =>
+    authedHttp<{ id: string; email: string; username: string; credits_balance: number }>(`/api/users/me`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    }),
   listSongs: (params?: ListSongsParams) => {
     const search = new URLSearchParams();
     if (params?.q) search.set("q", params.q);
@@ -170,6 +179,30 @@ export const api = {
         liked_by_me: boolean;
       }>;
     }>(url);
+  },
+  getPublicSongsByUser: (userId: string) => {
+    // Try authenticated first, fallback to unauthenticated
+    return authedHttp<
+      Array<{
+        id: string;
+        title: string;
+        audio_url?: string | null;
+        created_at: string;
+        is_public: boolean;
+        liked_by_me: boolean;
+      }>
+    >(`/api/songs/user/${userId}/public`).catch(() =>
+      http<
+        Array<{
+          id: string;
+          title: string;
+          audio_url?: string | null;
+          created_at: string;
+          is_public: boolean;
+          liked_by_me: boolean;
+        }>
+      >(`/api/songs/user/${userId}/public`)
+    );
   }
 };
 
