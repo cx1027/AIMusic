@@ -32,7 +32,8 @@ class Playlist(PlaylistBase, table=True):
         "Song",
         secondary="playlist_songs",
         back_populates="playlists",
-        lazy="selectin"
+        lazy="selectin",
+        passive_deletes=True,  # rely on DB to handle association row cleanup when parents are deleted
     )
 
 

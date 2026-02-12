@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
+from sqlalchemy import delete, or_
 from sqlmodel import Session, select
 
 from app.api.deps import get_current_user, get_db
@@ -148,14 +148,9 @@ def delete_song(
     if not song or song.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
 
-    # Remove associations first to avoid FK constraint issues.
-    links = db.exec(select(PlaylistSong).where(PlaylistSong.song_id == song_id)).all()
-    for link in links:
-        db.delete(link)
-
-    likes = db.exec(select(SongLike).where(SongLike.song_id == song_id)).all()
-    for like in likes:
-        db.delete(like)
+    # Let the database handle ON DELETE CASCADE for playlist_songs via the FK.
+    # Explicitly remove likes in one statement so rows are cleaned up before deleting the song.
+    db.exec(delete(SongLike).where(SongLike.song_id == song_id))
 
     db.delete(song)
     db.commit()

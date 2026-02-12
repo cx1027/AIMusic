@@ -43,7 +43,8 @@ class Song(SQLModel, table=True):
         "Playlist",
         secondary="playlist_songs",
         back_populates="songs",
-        lazy="selectin"
+        lazy="selectin",
+        passive_deletes=True,  # rely on DB-level cascade / existing state; don't issue DELETEs for secondary
     )
 
 
