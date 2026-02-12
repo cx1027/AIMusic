@@ -16,7 +16,16 @@ from app.worker import celery_app
 
 
 @celery_app.task(name="music_generation.run")
-def run_generation_task(*, task_id: str, user_id: str, prompt: str, lyrics: str | None, duration: int) -> dict:
+def run_generation_task(
+    *,
+    task_id: str,
+    user_id: str,
+    prompt: str,
+    lyrics: str | None,
+    duration: int,
+    title: str | None = None,
+    **_ignored: object,
+) -> dict:
     try:
         # Keep progress monotonic and reserve the tail for upload/db finalize.
         last_progress = 0
@@ -43,7 +52,7 @@ def run_generation_task(*, task_id: str, user_id: str, prompt: str, lyrics: str 
         with Session(engine) as db:
             song = Song(
                 user_id=UUID(user_id),
-                title="Generated",
+                title=title or "Generated",
                 prompt=prompt,
                 lyrics=lyrics,
                 duration=duration,

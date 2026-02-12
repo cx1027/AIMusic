@@ -13,6 +13,7 @@ type GenState = {
 
 export default function Generate() {
   const token = getAccessToken();
+  const [title, setTitle] = useState("My new song");
   const [prompt, setPrompt] = useState("lofi chill beats, rainy night");
   const [lyrics, setLyrics] = useState<string>("");
   const [duration, setDuration] = useState<number>(30);
@@ -32,7 +33,7 @@ export default function Generate() {
       esRef.current = null;
     }
     try {
-      const res = await api.generate(prompt, lyrics.trim() ? lyrics : null, duration);
+      const res = await api.generate(prompt, lyrics.trim() ? lyrics : null, duration, title.trim() ? title.trim() : null);
       const url = `${API_BASE}${res.events_url}?token=${encodeURIComponent(token)}`;
       // NOTE: backend uses Authorization header, but SSE can't set headers; we pass token via query and handle it server-side
       // if you don't want query tokens, switch to cookie auth.
@@ -61,6 +62,15 @@ export default function Generate() {
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
+          <div className="space-y-1">
+            <label className="text-sm text-gray-200">Song name</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Midnight Rain"
+              className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+            />
+          </div>
           <div className="space-y-1">
             <label className="text-sm text-gray-200">Prompt</label>
             <textarea

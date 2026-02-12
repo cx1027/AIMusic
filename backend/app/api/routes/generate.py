@@ -34,6 +34,12 @@ def create_generation(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
+    title = payload.get("title")
+    if title is not None:
+        title = str(title).strip()
+        if not title:
+            title = None
+
     prompt = (payload.get("prompt") or "").strip()
     if not prompt:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="prompt is required")
@@ -61,10 +67,12 @@ def create_generation(
     init_task(
         task_id,
         user_id=str(user.id),
-        payload={"prompt": prompt, "lyrics": lyrics, "duration": duration_int},
+        payload={"title": title, "prompt": prompt, "lyrics": lyrics, "duration": duration_int},
     )
 
-    run_generation_task.delay(task_id=task_id, user_id=str(user.id), prompt=prompt, lyrics=lyrics, duration=duration_int)
+    run_generation_task.delay(
+        task_id=task_id, user_id=str(user.id), title=title, prompt=prompt, lyrics=lyrics, duration=duration_int
+    )
 
     return {"task_id": task_id, "events_url": f"/api/generate/events/{task_id}"}
 

@@ -63,10 +63,10 @@ export const api = {
     authedHttp<{ song_id: string; liked: boolean; like_count: number }>(`/api/songs/${songId}/like`, {
       method: "POST"
     }),
-  generate: (prompt: string, lyrics: string | null, duration: number) =>
+  generate: (prompt: string, lyrics: string | null, duration: number, title?: string | null) =>
     authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
       method: "POST",
-      body: JSON.stringify({ prompt, lyrics, duration })
+      body: JSON.stringify({ prompt, lyrics, duration, title })
     }),
   listPlaylists: () => authedHttp<Playlist[]>(`/api/playlists`),
   createPlaylist: (name: string, description?: string | null) =>
