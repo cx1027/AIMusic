@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { api, API_BASE } from "../lib/api";
 import { getAccessToken } from "../lib/auth";
+import { resolveMediaUrl } from "../lib/media";
 
 type GenState = {
   task_id: string;
@@ -20,6 +21,7 @@ export default function Generate() {
   const esRef = useRef<EventSource | null>(null);
 
   const audioUrl = useMemo(() => state?.result?.audio_url || null, [state]);
+  const audioSrc = useMemo(() => resolveMediaUrl(audioUrl), [audioUrl]);
 
   async function start() {
     if (!token) return;
@@ -109,7 +111,7 @@ export default function Generate() {
               {audioUrl ? (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-200">Audio</div>
-                  <audio controls className="w-full" src={audioUrl} />
+                  <audio controls className="w-full" src={audioSrc ?? undefined} />
                 </div>
               ) : null}
             </>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { resolveMediaUrl } from "../lib/media";
 
 type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string };
 
@@ -86,7 +87,11 @@ export default function Library() {
                 </Link>
                 <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleString()}</div>
               </div>
-              {s.audio_url ? <audio controls src={s.audio_url} /> : <div className="text-xs text-gray-500">No audio</div>}
+              {s.audio_url ? (
+                <audio controls src={resolveMediaUrl(s.audio_url) ?? undefined} />
+              ) : (
+                <div className="text-xs text-gray-500">No audio</div>
+              )}
             </div>
           ))}
         </div>
