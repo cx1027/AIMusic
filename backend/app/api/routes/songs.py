@@ -57,7 +57,7 @@ def list_songs(
             SongLike.song_id.in_(song_ids),
         )
     ).all()
-    liked_ids = {row[0] for row in likes}
+    liked_ids = set(likes)
 
     out: list[SongPublic] = []
     for s in songs:

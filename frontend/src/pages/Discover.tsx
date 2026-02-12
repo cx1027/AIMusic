@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { resolveMediaUrl } from "../lib/media";
+import { playerStore } from "../stores/playerStore";
 
 type DiscoverSong = {
   id: string;
@@ -50,6 +52,22 @@ export default function Discover() {
     if (order === "popular") return data.trending;
     if (order === "style") return data.genre_songs;
     return data.latest;
+  };
+
+  const handlePlaySong = (song: DiscoverSong) => {
+    if (!song.audio_url) return;
+    const url = resolveMediaUrl(song.audio_url);
+    if (!url) return;
+    playerStore.setQueue(
+      [
+        {
+          id: song.id,
+          title: song.title,
+          audioUrl: url
+        }
+      ],
+      0
+    );
   };
 
   const handleLike = (song: DiscoverSong) => {
@@ -162,6 +180,17 @@ export default function Discover() {
                   </div>
 
                   <div className="flex items-center justify-end gap-2 text-xs">
+                    {s.audio_url ? (
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-emerald-400 hover:text-emerald-200"
+                        onClick={() => handlePlaySong(s)}
+                      >
+                        Play
+                      </button>
+                    ) : (
+                      <div className="text-xs text-gray-500">No audio</div>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleLike(s)}

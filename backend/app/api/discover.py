@@ -56,7 +56,7 @@ def _liked_ids_for_user(db: Session, user: Optional[User], song_ids: list[UUID])
             SongLike.song_id.in_(song_ids),
         )
     ).all()
-    return {row[0] for row in likes}
+    return set(likes)
 
 
 @router.get("")
