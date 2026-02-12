@@ -19,6 +19,7 @@ class User(SQLModel, table=True):
     credits_balance: int = Field(default=100)
 
     avatar_url: Optional[str] = None
+    details: Optional[str] = Field(default="")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -46,6 +47,7 @@ class RefreshRequest(SQLModel):
 class UserUpdate(SQLModel):
     email: Optional[str] = None
     username: Optional[str] = None
+    details: Optional[str] = None
 
 
 class UserPublic(SQLModel):
@@ -53,6 +55,7 @@ class UserPublic(SQLModel):
     email: str
     username: str
     avatar_url: Optional[str] = None
+    details: Optional[str] = None
     subscription_tier: str
     credits_balance: int
     created_at: datetime
@@ -63,6 +66,7 @@ class UserPublicProfile(SQLModel):
     id: UUID
     username: str
     avatar_url: Optional[str] = None
+    details: Optional[str] = None
     subscription_tier: str
     created_at: datetime
 

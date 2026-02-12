@@ -26,7 +26,7 @@ def update_me(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> UserPublic:
-    """Update current user's email and/or username."""
+    """Update current user's email, username, and/or details."""
     if payload.email is not None:
         normalized_email = payload.email.lower().strip()
         # Check if email is already taken by another user
@@ -39,6 +39,9 @@ def update_me(
     
     if payload.username is not None:
         user.username = payload.username.strip()
+    
+    if payload.details is not None:
+        user.details = payload.details.strip() if payload.details else ""
     
     db.add(user)
     db.commit()

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { api, Playlist, PlaylistWithSongs } from "../lib/api";
-import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 
@@ -149,9 +148,6 @@ export default function PlaylistsPage() {
           <h1 className="text-2xl font-semibold">Playlists</h1>
           <p className="mt-2 text-sm text-gray-300">Organize your generated songs into playlists.</p>
         </div>
-        <Link className="rounded-md bg-white px-3 py-2 text-sm text-black" to="/library">
-          Back to library
-        </Link>
       </div>
 
       {err && <p className="mt-3 text-sm text-red-400">{err}</p>}

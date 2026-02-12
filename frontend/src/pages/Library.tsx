@@ -119,9 +119,6 @@ export default function Library() {
           <h1 className="text-2xl font-semibold">Library</h1>
           <p className="mt-2 text-sm text-gray-300">Your generated songs.</p>
         </div>
-        <Link className="rounded-md bg-white px-3 py-2 text-sm text-black" to="/generate">
-          Generate new
-        </Link>
       </div>
 
       <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">

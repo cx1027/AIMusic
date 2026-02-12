@@ -35,13 +35,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
-  me: () => authedHttp<{ id: string; email: string; username: string; credits_balance: number }>(`/api/users/me`),
+  me: () => authedHttp<{ id: string; email: string; username: string; credits_balance: number; details?: string | null }>(`/api/users/me`),
   getUserByUsername: (username: string) =>
-    http<{ id: string; username: string; avatar_url?: string | null; subscription_tier: string; created_at: string }>(
+    http<{ id: string; username: string; avatar_url?: string | null; details?: string | null; subscription_tier: string; created_at: string }>(
       `/api/users/username/${encodeURIComponent(username)}`
     ),
-  updateUser: (payload: { email?: string; username?: string }) =>
-    authedHttp<{ id: string; email: string; username: string; credits_balance: number }>(`/api/users/me`, {
+  updateUser: (payload: { email?: string; username?: string; details?: string | null }) =>
+    authedHttp<{ id: string; email: string; username: string; credits_balance: number; details?: string | null }>(`/api/users/me`, {
       method: "PATCH",
       body: JSON.stringify(payload)
     }),

@@ -15,13 +15,15 @@ type Song = {
 export default function Profile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; email: string; credits_balance: number } | null>(null);
-  const [profileUser, setProfileUser] = useState<{ id: string; username: string; avatar_url?: string | null; subscription_tier: string; created_at: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; email: string; credits_balance: number; details?: string | null } | null>(null);
+  const [profileUser, setProfileUser] = useState<{ id: string; username: string; avatar_url?: string | null; details?: string | null; subscription_tier: string; created_at: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
   const [emailValue, setEmailValue] = useState("");
   const [usernameValue, setUsernameValue] = useState("");
+  const [detailsValue, setDetailsValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [publicSongs, setPublicSongs] = useState<Song[]>([]);
   const [songsLoading, setSongsLoading] = useState(false);
@@ -43,6 +45,7 @@ export default function Profile() {
           username: me.username,
           email: me.email,
           credits_balance: me.credits_balance,
+          details: me.details || null,
         });
 
         // If no username in URL, redirect to own profile
@@ -56,11 +59,13 @@ export default function Profile() {
           setProfileUser({
             id: me.id,
             username: me.username,
+            details: me.details || null,
             subscription_tier: "free",
             created_at: new Date().toISOString(),
           });
           setEmailValue(me.email);
           setUsernameValue(me.username);
+          setDetailsValue(me.details || "");
           setLoading(false);
         } else {
           // Viewing someone else's profile
@@ -137,10 +142,12 @@ export default function Profile() {
         username: updated.username,
         email: updated.email,
         credits_balance: updated.credits_balance,
+        details: updated.details || null,
       });
       setProfileUser({
         id: updated.id,
         username: updated.username,
+        details: updated.details || null,
         subscription_tier: "free",
         created_at: new Date().toISOString(),
       });
@@ -167,10 +174,12 @@ export default function Profile() {
         username: updated.username,
         email: updated.email,
         credits_balance: updated.credits_balance,
+        details: updated.details || null,
       });
       setProfileUser({
         id: updated.id,
         username: updated.username,
+        details: updated.details || null,
         subscription_tier: "free",
         created_at: new Date().toISOString(),
       });
@@ -180,6 +189,43 @@ export default function Profile() {
     } catch (e: any) {
       setErr(e?.message || "Failed to update username");
       if (currentUser) setUsernameValue(currentUser.username);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDetails = async () => {
+    if (!currentUser || !isOwnProfile) {
+      setEditingDetails(false);
+      return;
+    }
+    const currentDetails = currentUser.details || "";
+    if (detailsValue === currentDetails) {
+      setEditingDetails(false);
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    try {
+      const updated = await api.updateUser({ details: detailsValue || null });
+      setCurrentUser({
+        id: updated.id,
+        username: updated.username,
+        email: updated.email,
+        credits_balance: updated.credits_balance,
+        details: updated.details || null,
+      });
+      setProfileUser({
+        id: updated.id,
+        username: updated.username,
+        details: updated.details || null,
+        subscription_tier: "free",
+        created_at: new Date().toISOString(),
+      });
+      setEditingDetails(false);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update details");
+      if (currentUser) setDetailsValue(currentUser.details || "");
     } finally {
       setSaving(false);
     }
@@ -317,15 +363,71 @@ export default function Profile() {
                 )}
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Details</label>
+                {editingDetails ? (
+                  <div className="flex items-start gap-2">
+                    <textarea
+                      className="flex-1 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-sm text-white outline-none focus:border-white/30 min-h-[80px] resize-y"
+                      value={detailsValue}
+                      onChange={(e) => setDetailsValue(e.target.value)}
+                      disabled={saving}
+                      placeholder="Tell us about yourself..."
+                    />
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-white/20 bg-white/10 px-3 py-1 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={handleSaveDetails}
+                        disabled={saving}
+                      >
+                        {saving ? "Saving…" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-white/20 bg-black/40 px-3 py-1 text-xs text-gray-300 hover:bg-white/10"
+                        onClick={() => {
+                          setDetailsValue(currentUser.details || "");
+                          setEditingDetails(false);
+                        }}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2">
+                    <span className="text-gray-200 whitespace-pre-wrap flex-1">
+                      {profileUser.details || "No details provided"}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs text-gray-400 hover:text-gray-200 underline"
+                      onClick={() => setEditingDetails(true)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div>
                 <span className="text-gray-400">Credits:</span>{" "}
                 <span className="text-gray-200">{currentUser.credits_balance}</span>
               </div>
             </>
           ) : (
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Username</label>
-              <span className="text-gray-200">@{profileUser.username}</span>
-            </div>
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Username</label>
+                <span className="text-gray-200">@{profileUser.username}</span>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Details</label>
+                <span className="text-gray-200 whitespace-pre-wrap">
+                  {profileUser.details || "No details provided"}
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
