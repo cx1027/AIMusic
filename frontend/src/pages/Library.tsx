@@ -4,7 +4,7 @@ import { api, type Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 
-type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string };
+type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string; is_public: boolean };
 
 export default function Library() {
   const [songs, setSongs] = useState<SongRow[]>([]);
@@ -18,6 +18,7 @@ export default function Library() {
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [addingToId, setAddingToId] = useState<string | null>(null);
+  const [updatingVisibilityId, setUpdatingVisibilityId] = useState<string | null>(null);
 
   const handlePlaySong = (song: SongRow) => {
     if (!song.audio_url) return;
@@ -33,6 +34,19 @@ export default function Library() {
       ],
       0
     );
+  };
+
+  const handleToggleVisibility = async (song: SongRow) => {
+    setErr(null);
+    try {
+      setUpdatingVisibilityId(song.id);
+      const updated = await api.updateSongVisibility(song.id, !song.is_public);
+      setSongs((prev) => prev.map((x) => (x.id === song.id ? { ...x, is_public: updated.is_public } : x)));
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update visibility");
+    } finally {
+      setUpdatingVisibilityId(null);
+    }
   };
 
   useEffect(() => {
@@ -157,6 +171,22 @@ export default function Library() {
                   ) : (
                     <div className="text-xs text-gray-500">No audio</div>
                   )}
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-2 text-xs transition ${
+                      s.is_public
+                        ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                        : "border-white/20 bg-black/40 text-gray-200 hover:border-emerald-400 hover:text-emerald-200"
+                    }`}
+                    disabled={updatingVisibilityId === s.id}
+                    onClick={() => handleToggleVisibility(s)}
+                  >
+                    {updatingVisibilityId === s.id
+                      ? "Updating…"
+                      : s.is_public
+                      ? "Public"
+                      : "Make public"}
+                  </button>
                   <button
                     type="button"
                     className={`flex h-9 w-9 items-center justify-center rounded-full border px-0 text-sm transition ${

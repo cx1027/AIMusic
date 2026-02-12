@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import delete, or_
 from sqlmodel import Session, select
 
@@ -13,6 +14,10 @@ from app.models.song_like import SongLike
 from app.models.user import User
 
 router = APIRouter()
+
+
+class SongVisibilityUpdate(BaseModel):
+    is_public: bool
 
 
 @router.get("", response_model=list[SongPublic])
@@ -136,6 +141,27 @@ def toggle_like_song(
     db.refresh(song)
 
     return {"song_id": song.id, "liked": liked, "like_count": song.like_count}
+
+
+@router.patch("/{song_id}/visibility", response_model=SongPublic)
+def update_song_visibility(
+    song_id: UUID,
+    payload: SongVisibilityUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> SongPublic:
+    """Update the visibility (public/private) of a song."""
+    song = db.get(Song, song_id)
+    if not song or song.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+
+    song.is_public = payload.is_public
+
+    db.add(song)
+    db.commit()
+    db.refresh(song)
+
+    return SongPublic.model_validate(song, from_attributes=True)
 
 
 @router.delete("/{song_id}", status_code=status.HTTP_204_NO_CONTENT)

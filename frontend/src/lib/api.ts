@@ -43,7 +43,15 @@ export const api = {
     if (params?.order) search.set("order", params.order);
     const qs = search.toString();
     const url = qs ? `/api/songs?${qs}` : `/api/songs`;
-    return authedHttp<Array<{ id: string; title: string; audio_url?: string | null; created_at: string }>>(url);
+    return authedHttp<
+      Array<{
+        id: string;
+        title: string;
+        audio_url?: string | null;
+        created_at: string;
+        is_public: boolean;
+      }>
+    >(url);
   },
   getSong: (songId: string) => authedHttp<{
     id: string;
@@ -66,6 +74,11 @@ export const api = {
   toggleLikeSong: (songId: string) =>
     authedHttp<{ song_id: string; liked: boolean; like_count: number }>(`/api/songs/${songId}/like`, {
       method: "POST"
+    }),
+  updateSongVisibility: (songId: string, isPublic: boolean) =>
+    authedHttp<{ id: string; is_public: boolean }>(`/api/songs/${songId}/visibility`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_public: isPublic })
     }),
   generate: (prompt: string, lyrics: string | null, duration: number, title?: string | null) =>
     authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
