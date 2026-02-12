@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, Playlist, PlaylistWithSongs } from "../lib/api";
 import { Link } from "react-router-dom";
+import { resolveMediaUrl } from "../lib/media";
+import { playerStore } from "../stores/playerStore";
 
 export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -11,6 +13,7 @@ export default function PlaylistsPage() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [removingSongId, setRemovingSongId] = useState<string | null>(null);
 
   const loadPlaylists = () => {
     setLoading(true);
@@ -67,6 +70,58 @@ export default function PlaylistsPage() {
         }
       })
       .catch((e: any) => setErr(e?.message || "Failed to delete playlist"));
+  };
+
+  const handleRemoveSong = (playlistId: string, songId: string) => {
+    if (!window.confirm("Remove this song from the playlist?")) return;
+    setErr(null);
+    setRemovingSongId(songId);
+    api
+      .removeSongFromPlaylist(playlistId, songId)
+      .then((updated) => {
+        setSelected(updated);
+      })
+      .catch((e: any) => setErr(e?.message || "Failed to remove song from playlist"))
+      .finally(() => setRemovingSongId(null));
+  };
+
+  const buildQueueFromSelected = (startSongId?: string) => {
+    if (!selected) return null;
+    const items = selected.songs
+      .filter((s) => !!s.audio_url)
+      .map((s) => {
+        const url = s.audio_url ? resolveMediaUrl(s.audio_url) : null;
+        return url
+          ? {
+              id: s.id,
+              title: s.title,
+              audioUrl: url
+            }
+          : null;
+      })
+      .filter((x): x is { id: string; title: string; audioUrl: string } => x !== null);
+
+    if (!items.length) return null;
+
+    let startIndex = 0;
+    if (startSongId) {
+      const idx = items.findIndex((i) => i.id === startSongId);
+      if (idx !== -1) startIndex = idx;
+    }
+
+    return { items, startIndex };
+  };
+
+  const handlePlayPlaylist = () => {
+    const queue = buildQueueFromSelected();
+    if (!queue) return;
+    playerStore.setQueue(queue.items, queue.startIndex);
+  };
+
+  const handlePlayFromSong = (songId: string) => {
+    const queue = buildQueueFromSelected(songId);
+    if (!queue) return;
+    playerStore.setQueue(queue.items, queue.startIndex);
   };
 
   return (
@@ -163,6 +218,16 @@ export default function PlaylistsPage() {
                     {selected.songs.length} {selected.songs.length === 1 ? "song" : "songs"}
                   </p>
                 </div>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="rounded-md border border-green-400/60 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-100 hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handlePlayPlaylist}
+                    disabled={selected.songs.length === 0 || !selected.songs.some((s) => !!s.audio_url)}
+                  >
+                    Play playlist
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 border-t border-white/10 pt-3 text-sm">
@@ -179,12 +244,27 @@ export default function PlaylistsPage() {
                             Added: {new Date(s.created_at).toLocaleString()}
                           </div>
                         </div>
-                        <Link
-                          to={`/songs/${s.id}`}
-                          className="rounded-md border border-white/30 px-2 py-1 text-xs hover:bg-white hover:text-black"
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          {s.audio_url ? (
+                            <button
+                              type="button"
+                              className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200"
+                              onClick={() => handlePlayFromSong(s.id)}
+                            >
+                              Play from here
+                            </button>
+                          ) : (
+                            <div className="text-xs text-gray-500">No audio</div>
+                          )}
+                          <button
+                            type="button"
+                            className="rounded-md border border-red-500/60 bg-red-500/10 px-2 py-1 text-xs text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={removingSongId === s.id}
+                            onClick={() => handleRemoveSong(selected.id, s.id)}
+                          >
+                            {removingSongId === s.id ? "Removing…" : "Remove"}
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>

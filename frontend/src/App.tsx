@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import Protected from "./components/auth/Protected";
+import GlobalPlayer from "./components/player/GlobalPlayer";
 
 import Home from "./pages/Home";
 import Generate from "./pages/Generate";
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="/404" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
+      <GlobalPlayer />
       <Footer />
     </div>
   );

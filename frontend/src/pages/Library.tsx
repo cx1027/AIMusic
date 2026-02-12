@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
+import { playerStore } from "../stores/playerStore";
 
 type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string };
 
@@ -17,6 +18,22 @@ export default function Library() {
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [addingToId, setAddingToId] = useState<string | null>(null);
+
+  const handlePlaySong = (song: SongRow) => {
+    if (!song.audio_url) return;
+    const url = resolveMediaUrl(song.audio_url);
+    if (!url) return;
+    playerStore.setQueue(
+      [
+        {
+          id: song.id,
+          title: song.title,
+          audioUrl: url
+        }
+      ],
+      0
+    );
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -130,7 +147,13 @@ export default function Library() {
                 </div>
                 <div className="flex items-center gap-3">
                   {s.audio_url ? (
-                    <audio controls src={resolveMediaUrl(s.audio_url) ?? undefined} />
+                    <button
+                      type="button"
+                      className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200"
+                      onClick={() => handlePlaySong(s)}
+                    >
+                      Play
+                    </button>
                   ) : (
                     <div className="text-xs text-gray-500">No audio</div>
                   )}
