@@ -18,6 +18,21 @@ venv/
 # Backend runtime data
 backend/.data/
 
+# Large model files (too large for GitHub)
+*.safetensors
+*.pt
+*.bin
+*.ckpt
+*.pth
+*.pkl
+
+# Audio/Media output files
+backend/acestepapp/output/
+*.mp3
+*.wav
+*.mp4
+*.flac
+
 # Node / Frontend
 node_modules/
 dist/
