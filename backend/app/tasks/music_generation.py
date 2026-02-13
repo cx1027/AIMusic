@@ -27,6 +27,10 @@ def run_generation_task(
     **_ignored: object,
 ) -> dict:
     try:
+        print(f"\n{'='*80}", flush=True)
+        print(f"CELERY TASK STARTED: task_id={task_id}, prompt='{prompt[:50]}...'", flush=True)
+        print(f"{'='*80}\n", flush=True)
+        
         # Keep progress monotonic and reserve the tail for upload/db finalize.
         last_progress = 0
 

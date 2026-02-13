@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import math
 import struct
 from dataclasses import dataclass
 from typing import Callable, Optional
 
 from app.services.ace_step_service import AceStepGenerateParams, AceStepNotInstalledError, generate_wav_bytes
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -49,14 +52,23 @@ def generate_music(*, prompt: str, lyrics: str | None, duration: int, progress_c
     1) ACE-Step 1.5 local inference (when deps + weights are installed)
     2) MVP fallback sine wave (keeps the product runnable without heavy deps)
     """
-
+    print(f"[music_gen_service] generate_music called: prompt='{prompt[:50]}...', duration={duration}", flush=True)
+    logger.info(f"fsdafafgsg")
+    # print the lyrics if it exists
+    if lyrics:
+        logger.info(f"[music_gen_service] Lyrics: {lyrics}")
+    else:
+        logger.info("[music_gen_service] No lyrics provided !!!!!!!!!!!!!!!!!!")
     try:
+        print("[music_gen_service] Attempting ACE-Step generation...", flush=True)
         wav = generate_wav_bytes(
             AceStepGenerateParams(prompt=prompt, lyrics=lyrics, duration=duration),
             progress_cb=progress_cb,
         )
+        print("[music_gen_service] ACE-Step generation succeeded!", flush=True)
         return MusicGenResult(wav_bytes=wav, bpm=None)
-    except AceStepNotInstalledError:
+    except AceStepNotInstalledError as e:
+        print(f"[music_gen_service] ACE-Step not available, using fallback: {e}", flush=True)
         if progress_cb:
             progress_cb(15, "fallback: synth tone (ace-step not available)")
         wav = _wav_sine(seconds=min(max(duration, 1), 60), freq=220.0 if not lyrics else 330.0)

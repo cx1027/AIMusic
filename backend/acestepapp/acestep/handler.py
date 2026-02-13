@@ -3292,7 +3292,7 @@ class AceStepHandler:
                     audio_code_hints_batch = [audio_code_string] * actual_batch_size
 
             should_return_intermediate = (task_type == "text2music")
-            progress_desc = f"Generating music (batch size: {actual_batch_size})..."
+            progress_desc = "Generating music..."
             infer_steps_for_progress = len(timesteps) if timesteps else inference_steps
             progress(0.52, desc=progress_desc)
             stop_event = None
