@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api, Playlist, PlaylistWithSongs } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
+import SongDetailSidebar from "../components/song/SongDetailSidebar";
 
 export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -14,6 +15,7 @@ export default function PlaylistsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [removingSongId, setRemovingSongId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   const loadPlaylists = () => {
     setLoading(true);
@@ -142,19 +144,20 @@ export default function PlaylistsPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-1 flex-col px-4 py-6 text-white">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Playlists</h1>
-          <p className="mt-2 text-sm text-gray-300">Organize your generated songs into playlists.</p>
+    <>
+      <div className={`mx-auto flex flex-1 flex-col px-4 py-6 text-white transition-all ${selectedSongId ? 'max-w-5xl' : 'max-w-6xl'}`}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Playlists</h1>
+            <p className="mt-2 text-sm text-gray-300">Organize your generated songs into playlists.</p>
+          </div>
         </div>
-      </div>
 
-      {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
+        {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-[260px,1fr]">
+        <div className="mt-6 grid gap-4 md:grid-cols-[260px,1fr]">
         <div className="space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <div className={`rounded-xl border border-white/10 bg-white/5 p-4 transition-all ${selectedSongId ? 'max-w-[240px]' : ''}`}>
             <h2 className="text-sm font-medium">New playlist</h2>
             <div className="mt-3 space-y-2 text-sm">
               <input
@@ -218,7 +221,7 @@ export default function PlaylistsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <div className={`rounded-xl border border-white/10 bg-white/5 p-4 transition-all ${selectedSongId ? 'max-w-2xl' : ''}`}>
           {!selected && <p className="text-sm text-gray-300">Select a playlist on the left.</p>}
           {selected && (
             <>
@@ -261,8 +264,13 @@ export default function PlaylistsPage() {
                             : ""
                         }`}
                       >
-                        <div>
-                          <div className="text-sm font-medium">{s.title}</div>
+                        <div className="flex-1 min-w-0">
+                          <button
+                            onClick={() => setSelectedSongId(s.id)}
+                            className="text-left text-sm font-medium hover:underline cursor-pointer truncate block w-full"
+                          >
+                            {s.title}
+                          </button>
                           <div className="text-xs text-gray-400">
                             Added: {new Date(s.created_at).toLocaleString()}
                           </div>
@@ -298,7 +306,9 @@ export default function PlaylistsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+      <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+    </>
   );
 }
 

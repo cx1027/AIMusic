@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, type Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
+import SongDetailSidebar from "../components/song/SongDetailSidebar";
 
 type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string; is_public: boolean };
 
@@ -20,6 +21,7 @@ export default function Library() {
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [updatingVisibilityId, setUpdatingVisibilityId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   const handlePlaySong = (song: SongRow) => {
     if (!song.audio_url) return;
@@ -113,15 +115,16 @@ export default function Library() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Library</h1>
-          <p className="mt-2 text-sm text-gray-300">Your generated songs.</p>
+    <>
+      <div className={`mx-auto px-4 py-10 transition-all ${selectedSongId ? 'max-w-4xl' : 'max-w-5xl'}`}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Library</h1>
+            <p className="mt-2 text-sm text-gray-300">Your generated songs.</p>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+        <div className={`mt-6 rounded-xl border border-white/10 bg-white/5 p-5 transition-all ${selectedSongId ? 'max-w-3xl' : ''}`}>
         <div className="flex flex-col gap-3 border-b border-white/5 pb-4 text-sm md:flex-row md:items-end md:justify-between">
           <div className="flex flex-1 flex-col gap-2 md:flex-row">
             <div className="flex-1">
@@ -174,10 +177,13 @@ export default function Library() {
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <Link to={`/songs/${s.id}`} className="truncate text-gray-100 hover:underline">
+                <div className="min-w-0 flex-1">
+                  <button
+                    onClick={() => setSelectedSongId(s.id)}
+                    className="truncate text-left text-gray-100 hover:underline cursor-pointer"
+                  >
                     {s.title}
-                  </Link>
+                  </button>
                   <div className="mt-1 text-xs text-gray-400">{new Date(s.created_at).toLocaleString()}</div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -282,7 +288,9 @@ export default function Library() {
           })}
         </div>
       </div>
-    </div>
+      </div>
+      <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+    </>
   );
 }
 

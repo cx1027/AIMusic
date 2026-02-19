@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
+import SongDetailSidebar from "../components/song/SongDetailSidebar";
 
 type DiscoverSong = {
   id: string;
@@ -41,6 +42,7 @@ export default function Discover() {
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -150,18 +152,19 @@ export default function Discover() {
   const songs = getSongsForView();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Discover</h1>
-          <p className="mt-2 text-sm text-gray-300">Public library of shared songs.</p>
+    <>
+      <div className={`mx-auto px-4 py-10 transition-all ${selectedSongId ? 'max-w-4xl' : 'max-w-5xl'}`}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Discover</h1>
+            <p className="mt-2 text-sm text-gray-300">Public library of shared songs.</p>
+          </div>
+          <Link className="rounded-md bg-white px-3 py-2 text-sm text-black" to="/generate">
+            Generate new
+          </Link>
         </div>
-        <Link className="rounded-md bg-white px-3 py-2 text-sm text-black" to="/generate">
-          Generate new
-        </Link>
-      </div>
 
-      <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
+        <div className={`mt-6 rounded-xl border border-white/10 bg-white/5 p-5 transition-all ${selectedSongId ? 'max-w-3xl' : ''}`}>
         <div className="flex flex-col gap-3 border-b border-white/5 pb-4 text-sm md:flex-row md:items-end md:justify-between">
           <div className="flex flex-1 flex-col gap-2 md:flex-row">
             <div className="w-full md:w-40">
@@ -221,14 +224,18 @@ export default function Discover() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <Link to={`/songs/${s.id}`} className="truncate text-gray-100 hover:underline">
+                      <button
+                        onClick={() => setSelectedSongId(s.id)}
+                        className="truncate text-left text-gray-100 hover:underline cursor-pointer block w-full"
+                      >
                         {s.title || "Untitled"}
-                      </Link>
+                      </button>
                       <div className="mt-1 text-xs text-gray-400">
                         by{" "}
                         <Link
                           to={`/profile/${s.username}`}
                           className="font-medium text-gray-200 hover:text-white hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           @{s.username}
                         </Link>{" "}
@@ -313,7 +320,9 @@ export default function Discover() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+      <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+    </>
   );
 }
 
