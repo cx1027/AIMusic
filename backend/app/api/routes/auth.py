@@ -92,24 +92,51 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> UserPublic:
 
 @router.post("/login", response_model=TokenPair)
 def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenPair:
-    normalized_email = payload.email.lower().strip()
-    # Use raw SQL query directly
-    sql_query = text("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email)) LIMIT 1")
-    result = db.execute(sql_query, {"email": normalized_email})
-    row = result.fetchone()
-    if row:
-        # Get user by ID from the raw SQL result
-        user_id = row[0]
-        user = db.get(User, user_id)
-    else:
-        user = None
-    
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-    return TokenPair(
-        access_token=create_access_token(subject=str(user.id)),
-        refresh_token=create_refresh_token(subject=str(user.id)),
-    )
+    try:
+        if not payload.email or not payload.password:
+            logger.warning("Login attempt with empty email or password")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required"
+            )
+        
+        normalized_email = payload.email.lower().strip()
+        logger.info(f"Login attempt for email: {normalized_email}")
+        
+        # Use raw SQL query directly
+        sql_query = text("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(:email)) LIMIT 1")
+        result = db.execute(sql_query, {"email": normalized_email})
+        row = result.fetchone()
+        if row:
+            # Get user by ID from the raw SQL result
+            user_id = row[0]
+            user = db.get(User, user_id)
+            logger.info(f"User found: {user_id}")
+        else:
+            user = None
+            logger.warning(f"User not found for email: {normalized_email}")
+        
+        if not user:
+            logger.warning(f"Login failed: User not found for email {normalized_email}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        
+        if not verify_password(payload.password, user.password_hash):
+            logger.warning(f"Login failed: Invalid password for email {normalized_email}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        
+        logger.info(f"Login successful for user: {user.id}, email: {user.email}")
+        return TokenPair(
+            access_token=create_access_token(subject=str(user.id)),
+            refresh_token=create_refresh_token(subject=str(user.id)),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Login error for email {payload.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Login failed due to server error"
+        )
 
 
 @router.post("/refresh", response_model=TokenPair)
