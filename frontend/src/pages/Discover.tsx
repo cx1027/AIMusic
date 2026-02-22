@@ -4,6 +4,7 @@ import { api, Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 import SongDetailSidebar from "../components/song/SongDetailSidebar";
+import SongCard from "../components/song/SongCard";
 
 type DiscoverSong = {
   id: string;
@@ -214,49 +215,23 @@ export default function Discover() {
               const isPlaying = currentPlayingId === s.id;
 
               return (
-                <div
+                <SongCard
                   key={s.id}
-                  className={`space-y-2 rounded-lg border p-3 ${
-                    isPlaying 
-                      ? "border-pink-400/60 bg-pink-500/10" 
-                      : "border-white/10 bg-black/20"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <button
-                        onClick={() => setSelectedSongId(s.id)}
-                        className="truncate text-left text-gray-100 hover:underline cursor-pointer block w-full"
-                      >
-                        {s.title || "Untitled"}
-                      </button>
-                      <div className="mt-1 text-xs text-gray-400">
-                        by{" "}
-                        <Link
-                          to={`/profile/${s.username}`}
-                          className="font-medium text-gray-200 hover:text-white hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          @{s.username}
-                        </Link>{" "}
-                        · {s.genre ? <span className="uppercase">{s.genre}</span> : "No genre"}
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-gray-500">
-                        {new Date(s.created_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      {s.audio_url ? (
-                        <button
-                          type="button"
-                          className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-emerald-400 hover:text-emerald-200"
-                          onClick={() => handlePlaySong(s)}
-                        >
-                          {isPlaying ? "Playing" : "Play"}
-                        </button>
-                      ) : (
-                        <div className="text-xs text-gray-500">No audio</div>
-                      )}
+                  song={{
+                    ...s,
+                    like_count: state.like_count,
+                    liked_by_me: state.liked_by_me,
+                  }}
+                  variant="card"
+                  isPlaying={isPlaying}
+                  showPlayButton={true}
+                  showUsername={true}
+                  showGenre={true}
+                  showDate={true}
+                  onPlay={() => handlePlaySong(s)}
+                  onSelect={() => setSelectedSongId(s.id)}
+                  additionalActions={
+                    <>
                       <button
                         type="button"
                         onClick={() => handleLike(s)}
@@ -277,44 +252,45 @@ export default function Discover() {
                       >
                         <span className="text-base leading-none">+</span>
                       </button>
-                    </div>
-                  </div>
-
-                  {activeSongId === s.id && (
-                    <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                      {playlistsLoading ? (
-                        <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                      ) : playlists && playlists.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                            Add to playlist:
-                          </span>
-                          {playlists.map((pl) => (
-                            <button
-                              key={pl.id}
-                              type="button"
-                              className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                              disabled={addingToId === pl.id}
-                              onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                    </>
+                  }
+                  footer={
+                    activeSongId === s.id ? (
+                      <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
+                        {playlistsLoading ? (
+                          <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
+                        ) : playlists && playlists.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
+                              Add to playlist:
+                            </span>
+                            {playlists.map((pl) => (
+                              <button
+                                key={pl.id}
+                                type="button"
+                                className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={addingToId === pl.id}
+                                onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                              >
+                                {addingToId === pl.id ? "Adding…" : pl.name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>You don&apos;t have any playlists yet.</span>
+                            <Link
+                              to="/playlists"
+                              className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
                             >
-                              {addingToId === pl.id ? "Adding…" : pl.name}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>You don&apos;t have any playlists yet.</span>
-                          <Link
-                            to="/playlists"
-                            className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
-                          >
-                            Create a playlist
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                              Create a playlist
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    ) : null
+                  }
+                />
               );
             })}
           </div>

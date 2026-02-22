@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
+import { getAccessToken } from "../lib/auth";
 
 type UseWaveSurferOptions = {
   url: string | null;
@@ -19,6 +20,17 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
   useEffect(() => {
     if (!containerRef.current || !url) return;
 
+    // Get auth token for fetch headers
+    // Wavesurfer needs auth headers to fetch audio files that may require authentication
+    const token = getAccessToken();
+    const fetchParams: RequestInit = token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      : {};
+
     const ws = WaveSurfer.create({
       container: containerRef.current,
       waveColor: "#4b5563",
@@ -28,6 +40,7 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       barGap: 1,
       height: 96,
       responsive: true,
+      fetchParams,
     });
 
     waveSurferRef.current = ws;
@@ -43,8 +56,9 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       setDuration(ws.getDuration() || 0);
     };
 
-    const onError = (e: string) => {
-      setError(e || "Failed to load audio");
+    const onError = (e: string | Error) => {
+      const errorMessage = typeof e === 'string' ? e : e?.message || "Failed to load audio";
+      setError(errorMessage);
       setLoading(false);
     };
 
@@ -66,7 +80,12 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       ws.un("play", onPlay);
       ws.un("pause", onPause);
       ws.un("timeupdate", onTimeUpdate);
-      ws.destroy();
+      try {
+        ws.destroy();
+      } catch (e) {
+        // Ignore errors during cleanup (e.g., AbortError from aborted fetch)
+        console.debug("Error during wavesurfer cleanup:", e);
+      }
       waveSurferRef.current = null;
     };
   }, [url]);

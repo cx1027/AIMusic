@@ -3,6 +3,8 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
+import SongCard from "../components/song/SongCard";
+import SongDetailSidebar from "../components/song/SongDetailSidebar";
 
 type Song = {
   id: string;
@@ -28,6 +30,7 @@ export default function Profile() {
   const [publicSongs, setPublicSongs] = useState<Song[]>([]);
   const [songsLoading, setSongsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   const isOwnProfile = currentUser && profileUser && currentUser.id === profileUser.id;
 
@@ -267,7 +270,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <>
+    <div className={`mx-auto px-4 py-10 transition-all ${selectedSongId ? 'max-w-4xl' : 'max-w-5xl'}`}>
       <h1 className="text-2xl font-semibold">Profile{isOwnProfile ? "" : `: @${profileUser.username}`}</h1>
       <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
         {err ? <div className="mb-4 text-sm text-red-300">{err}</div> : null}
@@ -434,7 +438,7 @@ export default function Profile() {
 
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-4">Public Songs</h2>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <div className={`rounded-xl border border-white/10 bg-white/5 p-5 transition-all ${selectedSongId ? 'max-w-3xl' : ''}`}>
           {songsLoading ? (
             <div className="text-gray-300">Loading…</div>
           ) : publicSongs.length === 0 ? (
@@ -442,37 +446,22 @@ export default function Profile() {
           ) : (
             <div className="grid gap-3">
               {publicSongs.map((song) => (
-                <div
+                <SongCard
                   key={song.id}
-                  className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <Link to={`/songs/${song.id}`} className="truncate text-gray-100 hover:underline">
-                        {song.title}
-                      </Link>
-                      <div className="mt-1 text-xs text-gray-400">{new Date(song.created_at).toLocaleString()}</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {song.audio_url ? (
-                        <button
-                          type="button"
-                          className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200"
-                          onClick={() => handlePlaySong(song)}
-                        >
-                          Play
-                        </button>
-                      ) : (
-                        <div className="text-xs text-gray-500">No audio</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  song={song}
+                  variant="card"
+                  showPlayButton={true}
+                  showDate={true}
+                  onSelect={() => setSelectedSongId(song.id)}
+                  onPlay={() => handlePlaySong(song)}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
     </div>
+    <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+    </>
   );
 }

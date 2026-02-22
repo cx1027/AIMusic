@@ -3,6 +3,7 @@ import { api, Playlist, PlaylistWithSongs } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 import SongDetailSidebar from "../components/song/SongDetailSidebar";
+import SongCard from "../components/song/SongCard";
 
 export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -193,9 +194,9 @@ export default function PlaylistsPage() {
                 <div className="px-2 py-3 text-gray-400">No playlists yet. Create one above.</div>
               )}
               {playlists.map((pl) => (
-                <button
+                <div
                   key={pl.id}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-white/10 ${
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-white/10 cursor-pointer ${
                     selectedId === pl.id ? "bg-white/15" : ""
                   }`}
                   onClick={() => setSelectedId(pl.id)}
@@ -207,6 +208,7 @@ export default function PlaylistsPage() {
                     )}
                   </div>
                   <button
+                    type="button"
                     className="ml-2 rounded bg-red-500/80 px-1.5 py-0.5 text-xs text-white hover:bg-red-500"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -215,7 +217,7 @@ export default function PlaylistsPage() {
                   >
                     Delete
                   </button>
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -256,47 +258,27 @@ export default function PlaylistsPage() {
                     {selected.songs.map((s) => {
                       const isPlaying = currentPlayingId === s.id;
                       return (
-                      <li 
-                        key={s.id} 
-                        className={`flex items-center justify-between py-2 px-2 rounded-md ${
-                          isPlaying 
-                            ? "bg-pink-500/10 border border-pink-400/60" 
-                            : ""
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <button
-                            onClick={() => setSelectedSongId(s.id)}
-                            className="text-left text-sm font-medium hover:underline cursor-pointer truncate block w-full"
-                          >
-                            {s.title}
-                          </button>
-                          <div className="text-xs text-gray-400">
-                            Added: {new Date(s.created_at).toLocaleString()}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {s.audio_url ? (
+                        <SongCard
+                          key={s.id}
+                          song={s}
+                          variant="list"
+                          isPlaying={isPlaying}
+                          showPlayButton={true}
+                          showDate={true}
+                          playButtonText={isPlaying ? "Playing" : "Play from here"}
+                          onPlay={() => handlePlayFromSong(s.id)}
+                          onSelect={() => setSelectedSongId(s.id)}
+                          additionalActions={
                             <button
                               type="button"
-                              className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200"
-                              onClick={() => handlePlayFromSong(s.id)}
+                              className="rounded-md border border-red-500/60 bg-red-500/10 px-2 py-1 text-xs text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={removingSongId === s.id}
+                              onClick={() => handleRemoveSong(selected.id, s.id)}
                             >
-                              {isPlaying ? "Playing" : "Play from here"}
+                              {removingSongId === s.id ? "Removing…" : "Remove"}
                             </button>
-                          ) : (
-                            <div className="text-xs text-gray-500">No audio</div>
-                          )}
-                          <button
-                            type="button"
-                            className="rounded-md border border-red-500/60 bg-red-500/10 px-2 py-1 text-xs text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                            disabled={removingSongId === s.id}
-                            onClick={() => handleRemoveSong(selected.id, s.id)}
-                          >
-                            {removingSongId === s.id ? "Removing…" : "Remove"}
-                          </button>
-                        </div>
-                      </li>
+                          }
+                        />
                       );
                     })}
                   </ul>

@@ -45,7 +45,7 @@ export default function DetailPlayer({ audioUrl, durationSeconds }: DetailPlayer
         <div className="flex-1 text-xs text-gray-400">
           {loading && <span>Loading audio…</span>}
           {!loading && !resolvedUrl && <span>No audio available</span>}
-          {error && <span className="text-red-400">{error}</span>}
+          {error && <span className="text-red-400">{typeof error === 'string' ? error : error?.message || 'Failed to load audio'}</span>}
           {!loading && !error && resolvedUrl && !ready && <span>Preparing waveform…</span>}
         </div>
         <div className="text-xs tabular-nums text-gray-300">

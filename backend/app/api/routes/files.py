@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse, RedirectResponse, Response
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
@@ -56,7 +56,7 @@ async def upload_file(
 
 
 @router.get("/{key}")
-def get_file(key: str):
+async def get_file(key: str, request: Request):
     """
     Backwards-compatible local-file serving (used only for local backend
     without signed URLs). For S3/R2, issue a short-lived signed URL redirect.
@@ -71,7 +71,19 @@ def get_file(key: str):
             raise HTTPException(status_code=400, detail="Invalid path")
         if not p.exists():
             raise HTTPException(status_code=404, detail="Not found")
-        return FileResponse(p)
+        
+        # Determine media type from file extension
+        ext = p.suffix.lower()
+        media_types = {
+            ".mp3": "audio/mpeg",
+            ".wav": "audio/wav",
+            ".flac": "audio/flac",
+            ".ogg": "audio/ogg",
+            ".m4a": "audio/mp4",
+        }
+        media_type = media_types.get(ext, "application/octet-stream")
+        
+        return FileResponse(p, media_type=media_type)
 
     # S3/R2: redirect to signed URL
     try:
