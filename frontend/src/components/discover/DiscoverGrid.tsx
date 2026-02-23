@@ -6,6 +6,7 @@ type DiscoverSong = {
   username: string;
   title: string;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   duration: number;
   genre?: string | null;
   like_count: number;

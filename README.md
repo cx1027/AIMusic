@@ -35,8 +35,10 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd backend
 source .venv/bin/activate
-celery -A app.worker.celery_app worker -l info
+celery -A app.worker.celery_app worker -l info --pool=solo
 ```
+
+**注意**: 使用 `--pool=solo` 避免 ML 模型在 fork 进程时内存溢出。solo 池在单进程中运行（不 fork），更适合加载大型 ML 模型。
 
 ### 4) 启动前端
 

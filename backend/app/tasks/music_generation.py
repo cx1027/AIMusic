@@ -9,6 +9,7 @@ from app.models.user import User  # noqa: F401 - needed for foreign key resoluti
 from app.models.playlist_song import PlaylistSong  # noqa: F401 - needed for relationship resolution
 from app.models.playlist import Playlist  # noqa: F401 - needed for relationship resolution
 from app.models.song import Song
+from app.services.image_gen_service import FluxNotInstalledError, generate_cover_image
 from app.services.music_gen_service import generate_music
 from app.services.progress_service import update_task
 from app.services.storage_service import get_storage
@@ -50,9 +51,32 @@ def run_generation_task(
 
         res = generate_music(prompt=prompt, lyrics=lyrics, duration=duration, progress_cb=report)
 
-        update_task(task_id, status="running", progress=90, message="uploading")
+        update_task(task_id, status="running", progress=60, message="uploading audio")
         stored = get_storage().store_bytes(content=res.wav_bytes, suffix=".wav", content_type="audio/wav")
 
+        # Generate cover image
+        cover_image_url = None
+        print(f"[music_generation] Starting cover image generation...", flush=True)
+        try:
+            report(65, "generating cover image")
+            print(f"[music_generation] Calling generate_cover_image...", flush=True)
+            cover_res = generate_cover_image(prompt=prompt, title=title, progress_cb=lambda p, m: report(65 + int(p * 0.15), m))
+            print(f"[music_generation] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
+            report(80, "uploading cover image")
+            cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+            cover_image_url = cover_stored.url
+            print(f"[music_generation] Cover image uploaded: {cover_image_url}", flush=True)
+        except FluxNotInstalledError as e:
+            print(f"[music_generation] FLUX.1 Schnell not available, skipping cover image: {e}", flush=True)
+            import traceback
+            print(f"[music_generation] Traceback: {traceback.format_exc()}", flush=True)
+        except Exception as e:
+            print(f"[music_generation] Error generating cover image: {type(e).__name__}: {e}", flush=True)
+            import traceback
+            print(f"[music_generation] Traceback: {traceback.format_exc()}", flush=True)
+            # Continue without cover image if generation fails
+
+        update_task(task_id, status="running", progress=90, message="saving")
         with Session(engine) as db:
             song = Song(
                 user_id=UUID(user_id),
@@ -62,12 +86,13 @@ def run_generation_task(
                 duration=duration,
                 bpm=res.bpm,
                 audio_url=stored.url,
+                cover_image_url=cover_image_url,
             )
             db.add(song)
             db.commit()
             db.refresh(song)
 
-        result = {"song_id": str(song.id), "audio_url": stored.url}
+        result = {"song_id": str(song.id), "audio_url": stored.url, "cover_image_url": cover_image_url}
         update_task(task_id, status="completed", progress=100, message="completed", result=result)
         return result
     except Exception as e:

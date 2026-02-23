@@ -34,6 +34,7 @@ def _rows_to_payload(
                 "prompt": song.prompt,
                 "lyrics": song.lyrics,
                 "audio_url": song.audio_url,
+                "cover_image_url": song.cover_image_url,
                 "duration": song.duration,
                 "genre": song.genre,
                 "bpm": song.bpm,

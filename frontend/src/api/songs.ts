@@ -7,6 +7,7 @@ export type Song = {
   prompt: string;
   lyrics?: string | null;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   duration: number;
   genre?: string | null;
   bpm?: number | null;

@@ -63,6 +63,7 @@ class SongPublic(SQLModel):
     prompt: str
     lyrics: Optional[str] = None
     audio_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
     duration: int
     genre: Optional[str] = None
     bpm: Optional[int] = None

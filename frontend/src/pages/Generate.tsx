@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, API_BASE } from "../lib/api";
 import { getAccessToken } from "../lib/auth";
 import { resolveMediaUrl } from "../lib/media";
@@ -8,7 +8,7 @@ type GenState = {
   status: "queued" | "running" | "completed" | "failed";
   progress: number;
   message?: string;
-  result?: { song_id?: string; audio_url?: string };
+  result?: { song_id?: string; audio_url?: string; cover_image_url?: string };
 };
 
 export default function Generate() {
@@ -23,6 +23,22 @@ export default function Generate() {
 
   const audioUrl = useMemo(() => state?.result?.audio_url || null, [state]);
   const audioSrc = useMemo(() => resolveMediaUrl(audioUrl), [audioUrl]);
+  const coverImageUrl = useMemo(() => state?.result?.cover_image_url || null, [state]);
+  const coverImageSrc = useMemo(() => resolveMediaUrl(coverImageUrl), [coverImageUrl]);
+
+  // Debug logging
+  useEffect(() => {
+    if (state) {
+      console.log("[Generate] State update:", {
+        status: state.status,
+        progress: state.progress,
+        message: state.message,
+        result: state.result,
+        coverImageUrl: coverImageUrl,
+        coverImageSrc: coverImageSrc,
+      });
+    }
+  }, [state, coverImageUrl, coverImageSrc]);
 
   async function start() {
     if (!token) return;
@@ -41,8 +57,15 @@ export default function Generate() {
       esRef.current = es;
       es.addEventListener("progress", (e: MessageEvent) => {
         const next = JSON.parse(e.data) as GenState;
+        console.log("[Generate] SSE progress event:", {
+          status: next.status,
+          progress: next.progress,
+          message: next.message,
+          result: next.result,
+        });
         setState(next);
         if (next.status === "completed" || next.status === "failed") {
+          console.log("[Generate] Task completed/failed, closing SSE connection");
           es.close();
           esRef.current = null;
         }
@@ -118,6 +141,32 @@ export default function Generate() {
                 <div className="h-2 bg-white" style={{ width: `${state.progress}%` }} />
               </div>
               <div className="text-sm text-gray-300">{state.message}</div>
+              {coverImageSrc ? (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-200">Cover Image</div>
+                  <div className="flex justify-center">
+                    <img
+                      src={coverImageSrc}
+                      alt="Generated cover"
+                      className="max-w-full rounded-lg border border-white/10"
+                      style={{ maxHeight: "400px" }}
+                      onLoad={() => console.log("[Generate] Cover image loaded successfully:", coverImageSrc)}
+                      onError={(e) => {
+                        console.error("[Generate] Cover image failed to load:", coverImageSrc, e);
+                        console.error("[Generate] Image error details:", {
+                          coverImageUrl,
+                          coverImageSrc,
+                          result: state.result,
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : state.status === "completed" && !coverImageSrc ? (
+                <div className="text-sm text-yellow-300">
+                  Cover image not available (may not be generated or FLUX.1 Schnell not installed)
+                </div>
+              ) : null}
               {audioUrl ? (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-200">Audio</div>

@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { ReactNode } from "react";
+import { resolveMediaUrl } from "../../lib/media";
 
 type BaseSong = {
   id: string;
   title: string;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   created_at: string;
 };
 
@@ -59,6 +61,7 @@ export default function SongCard({
   additionalActions,
   footer,
 }: SongCardProps) {
+  const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
   const playingClasses = isPlaying
     ? variant === "card"
       ? "border-pink-400/60 bg-pink-500/10"
@@ -100,6 +103,15 @@ export default function SongCard({
     <>
       {variant === "card" ? (
         <div className="flex items-center justify-between gap-3">
+          {coverImageSrc && (
+            <div className="flex-shrink-0">
+              <img
+                src={coverImageSrc}
+                alt={`Cover for ${song.title || "Untitled"}`}
+                className="h-16 w-16 rounded-md object-cover"
+              />
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             {titleElement}
             {showUsername && song.username && (

@@ -44,7 +44,7 @@ services:
   worker:
     build:
       context: ./backend
-    command: celery -A app.worker.celery_app worker -l info
+    command: celery -A app.worker.celery_app worker -l info --pool=solo
     environment:
       DATABASE_URL: postgresql+psycopg://aimusic:aimusic@postgres:5432/aimusic
       REDIS_URL: redis://redis:6379/0

@@ -19,6 +19,13 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    # Use solo pool to avoid forking issues with large ML models
+    # Solo pool runs in the main process (no forking), which is safer for ML models
+    # that consume significant memory. Trade-off: only one task at a time.
+    worker_pool="solo",
+    # Alternative: use threads pool if you need concurrency (but may have issues with MPS/CUDA)
+    # worker_pool="threads",
+    # worker_threads=1,  # Use with threads pool
 )
 
 
