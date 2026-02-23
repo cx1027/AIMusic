@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
-import DetailPlayer from "../player/DetailPlayer";
+import { X, Heart, Share2 } from "lucide-react";
 import { api, Playlist, PlaylistWithSongs } from "../../lib/api";
+import { resolveMediaUrl } from "../../lib/media";
 
 type SongDetailData = {
   id: string;
@@ -9,6 +9,7 @@ type SongDetailData = {
   prompt: string;
   lyrics?: string | null;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   duration: number;
   genre?: string | null;
   bpm?: number | null;
@@ -122,6 +123,33 @@ export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebar
       .finally(() => setLikeLoading(false));
   };
 
+  const handleShare = () => {
+    if (!song) return;
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/songs/${song.id}`
+        : `/songs/${song.id}`;
+
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      (navigator as any)
+        .share({
+          title: song.title,
+          text: "Check out this song I generated!",
+          url,
+        })
+        .catch(() => {
+          // ignore share cancel/errors
+        });
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {
+        // ignore clipboard errors
+      });
+    }
+  };
+
   if (!songId) return null;
 
   return (
@@ -143,6 +171,16 @@ export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebar
 
         {!loading && !error && song && (
           <>
+            {song.cover_image_url && (
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <img
+                  src={resolveMediaUrl(song.cover_image_url)}
+                  alt={song.title}
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            )}
+
             <div>
               <h1 className="text-2xl font-semibold text-white">{song.title}</h1>
               <p className="mt-1 text-xs text-gray-400">
@@ -151,72 +189,27 @@ export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebar
             </div>
 
             <div className="flex gap-4 text-xs text-gray-400">
-              <div>
-                <div className="font-medium text-gray-200">Plays</div>
-                <div className="mt-1 tabular-nums">{song.play_count}</div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="font-medium text-gray-200">Likes</div>
-                  <button
-                    type="button"
-                    onClick={handleToggleLike}
-                    disabled={likeLoading}
-                    className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-white/10 disabled:opacity-60"
-                  >
-                    {likeLoading ? "…" : song.liked_by_me ? "Liked" : "Like"}
-                  </button>
-                </div>
-                <div className="mt-1 tabular-nums">{song.like_count}</div>
-              </div>
-              {song.genre && (
-                <div>
-                  <div className="font-medium text-gray-200">Genre</div>
-                  <div className="mt-1 uppercase">{song.genre}</div>
-                </div>
-              )}
-              {song.bpm != null && (
-                <div>
-                  <div className="font-medium text-gray-200">BPM</div>
-                  <div className="mt-1 tabular-nums">{song.bpm}</div>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={handleToggleLike}
+                disabled={likeLoading}
+                className="inline-flex items-center justify-center rounded-full border border-white/20 p-2 text-white hover:bg-white/10 disabled:opacity-60"
+                aria-label={song.liked_by_me ? "Unlike song" : "Like song"}
+              >
+                <Heart
+                  className="h-4 w-4"
+                  fill={song.liked_by_me ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex items-center justify-center rounded-full border border-white/20 p-2 text-white hover:bg-white/10"
+                aria-label="Share song"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
             </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <DetailPlayer audioUrl={song.audio_url} durationSeconds={song.duration} />
-            </div>
-
-            {playlists.length > 0 && (
-              <div className="rounded-xl border border-white/10 bg-black/40 p-4">
-                <h2 className="text-sm font-semibold text-white mb-3">Playlists</h2>
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={selectedPlaylistId}
-                    onChange={(e) => setSelectedPlaylistId(e.target.value)}
-                    className="w-full rounded-md border border-white/15 bg-black/60 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  >
-                    {playlists.map((pl) => (
-                      <option key={pl.id} value={pl.id}>
-                        {pl.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleTogglePlaylist}
-                    disabled={!selectedPlaylistId || playlistActionLoading || playlistsLoading}
-                    className="inline-flex items-center justify-center rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {playlistActionLoading || playlistsLoading
-                      ? "Updating…"
-                      : isInSelectedPlaylist
-                      ? "Remove from playlist"
-                      : "Add to playlist"}
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="space-y-4">
               <div className="space-y-2 rounded-xl border border-white/10 bg-black/40 p-4">

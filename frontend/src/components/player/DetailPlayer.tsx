@@ -32,7 +32,7 @@ export default function DetailPlayer({ audioUrl, durationSeconds }: DetailPlayer
   };
 
   return (
-    <div className="space-y-3">
+    <>
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -45,7 +45,11 @@ export default function DetailPlayer({ audioUrl, durationSeconds }: DetailPlayer
         <div className="flex-1 text-xs text-gray-400">
           {loading && <span>Loading audio…</span>}
           {!loading && !resolvedUrl && <span>No audio available</span>}
-          {error && <span className="text-red-400">{typeof error === 'string' ? error : error?.message || 'Failed to load audio'}</span>}
+          {error && (
+            <span className="text-red-400">
+              {typeof error === "string" ? error : error?.message || "Failed to load audio"}
+            </span>
+          )}
           {!loading && !error && resolvedUrl && !ready && <span>Preparing waveform…</span>}
         </div>
         <div className="text-xs tabular-nums text-gray-300">
@@ -54,9 +58,9 @@ export default function DetailPlayer({ audioUrl, durationSeconds }: DetailPlayer
       </div>
       <div
         ref={containerRef}
-        className="h-24 w-full rounded-lg border border-white/10 bg-black/40"
+        className="mt-3 h-24 w-full rounded-lg border border-white/10 bg-black/40"
       />
-    </div>
+    </>
   );
 }
 
