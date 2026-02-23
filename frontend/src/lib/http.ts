@@ -41,8 +41,10 @@ async function refreshTokens(): Promise<{ access: string; refresh: string }> {
 
 export async function authedHttp<T>(path: string, init?: RequestInit, opts?: { retry?: boolean }): Promise<T> {
   const token = getAccessToken();
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  const baseHeaders: HeadersInit = isFormData ? {} : { "Content-Type": "application/json" };
   const headers: HeadersInit = mergeHeaders(
-    { "Content-Type": "application/json" },
+    baseHeaders,
     mergeHeaders(init?.headers, token ? { Authorization: `Bearer ${token}` } : undefined)
   );
 

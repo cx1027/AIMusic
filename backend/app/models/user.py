@@ -19,6 +19,7 @@ class User(SQLModel, table=True):
     credits_balance: int = Field(default=1000)
 
     avatar_url: Optional[str] = None
+    background_url: Optional[str] = None
     details: Optional[str] = Field(default="")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -55,6 +56,7 @@ class UserPublic(SQLModel):
     email: str
     username: str
     avatar_url: Optional[str] = None
+    background_url: Optional[str] = None
     details: Optional[str] = None
     subscription_tier: str
     credits_balance: int
@@ -66,8 +68,13 @@ class UserPublicProfile(SQLModel):
     id: UUID
     username: str
     avatar_url: Optional[str] = None
+    background_url: Optional[str] = None
     details: Optional[str] = None
     subscription_tier: str
     created_at: datetime
+    followers_count: int = 0
+    following_count: int = 0
+    is_following: Optional[bool] = None
+    is_me: Optional[bool] = None
 
 

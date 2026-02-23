@@ -17,8 +17,28 @@ type Song = {
 export default function Profile() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; email: string; credits_balance: number; details?: string | null } | null>(null);
-  const [profileUser, setProfileUser] = useState<{ id: string; username: string; avatar_url?: string | null; details?: string | null; subscription_tier: string; created_at: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    username: string;
+    email: string;
+    credits_balance: number;
+    details?: string | null;
+    avatar_url?: string | null;
+    background_url?: string | null;
+    followers_count?: number;
+    following_count?: number;
+  } | null>(null);
+  const [profileUser, setProfileUser] = useState<{
+    id: string;
+    username: string;
+    avatar_url?: string | null;
+    background_url?: string | null;
+    details?: string | null;
+    subscription_tier: string;
+    created_at: string;
+    followers_count?: number;
+    following_count?: number;
+  } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
@@ -31,6 +51,8 @@ export default function Profile() {
   const [songsLoading, setSongsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
 
   const isOwnProfile = currentUser && profileUser && currentUser.id === profileUser.id;
 
@@ -48,7 +70,11 @@ export default function Profile() {
           username: me.username,
           email: me.email,
           credits_balance: me.credits_balance,
+          avatar_url: me.avatar_url || null,
+          background_url: me.background_url || null,
           details: me.details || null,
+          followers_count: me.followers_count,
+          following_count: me.following_count,
         });
 
         // If no username in URL, redirect to own profile
@@ -59,13 +85,23 @@ export default function Profile() {
 
         // If viewing own profile
         if (me.username === username) {
-          setProfileUser({
-            id: me.id,
-            username: me.username,
-            details: me.details || null,
-            subscription_tier: "free",
-            created_at: new Date().toISOString(),
-          });
+          // For own profile, enrich with server-side profile data (including followers/following)
+          try {
+            const profile = await api.getUserByUsername(me.username);
+            setProfileUser(profile);
+          } catch {
+            setProfileUser({
+              id: me.id,
+              username: me.username,
+              avatar_url: me.avatar_url || null,
+              background_url: me.background_url || null,
+              details: me.details || null,
+              subscription_tier: "free",
+              created_at: new Date().toISOString(),
+              followers_count: me.followers_count,
+              following_count: me.following_count,
+            });
+          }
           setEmailValue(me.email);
           setUsernameValue(me.username);
           setDetailsValue(me.details || "");
@@ -73,8 +109,8 @@ export default function Profile() {
         } else {
           // Viewing someone else's profile
           try {
-            const user = await api.getUserByUsername(username);
-            setProfileUser(user);
+            const userProfile = await api.getUserByUsername(username);
+            setProfileUser(userProfile);
             setLoading(false);
           } catch (e: any) {
             setErr(e?.message || "User not found");
@@ -85,8 +121,8 @@ export default function Profile() {
         // Not authenticated - can still view other users' profiles
         if (username) {
           try {
-            const user = await api.getUserByUsername(username);
-            setProfileUser(user);
+            const userProfile = await api.getUserByUsername(username);
+            setProfileUser(userProfile);
             setLoading(false);
           } catch (err: any) {
             setErr(err?.message || "User not found");
@@ -234,6 +270,66 @@ export default function Profile() {
     }
   };
 
+  const handleAvatarChange = async (file: File) => {
+    if (!currentUser || !isOwnProfile) return;
+    setErr(null);
+    setUploadingAvatar(true);
+    try {
+      const res = await api.uploadAvatar(file);
+      const avatarUrl = res.avatar_url;
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              avatar_url: avatarUrl,
+            }
+          : prev
+      );
+      setProfileUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              avatar_url: avatarUrl,
+            }
+          : prev
+      );
+    } catch (e: any) {
+      setErr(e?.message || "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleBackgroundChange = async (file: File) => {
+    if (!currentUser || !isOwnProfile) return;
+    setErr(null);
+    setUploadingBackground(true);
+    try {
+      const res = await api.uploadBackground(file);
+      const bgUrl = res.background_url;
+      setCurrentUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              background_url: bgUrl,
+            }
+          : prev
+      );
+      setProfileUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              background_url: bgUrl,
+            }
+          : prev
+      );
+    } catch (e: any) {
+      setErr(e?.message || "Failed to upload background");
+    } finally {
+      setUploadingBackground(false);
+    }
+  };
+
   const handlePlaySong = (song: Song) => {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
@@ -272,7 +368,99 @@ export default function Profile() {
   return (
     <>
     <div className={`mx-auto px-4 py-10 transition-all ${selectedSongId ? 'max-w-4xl' : 'max-w-5xl'}`}>
-      <h1 className="text-2xl font-semibold">Profile{isOwnProfile ? "" : `: @${profileUser.username}`}</h1>
+      {/* Profile header with background and avatar */}
+      <div className="rounded-2xl border border-white/10 overflow-hidden bg-gradient-to-r from-purple-700/60 via-indigo-700/60 to-slate-900/80">
+        <div
+          className="h-32 sm:h-40 w-full bg-cover bg-center"
+          style={
+            profileUser.background_url
+              ? { backgroundImage: `url(${resolveMediaUrl(profileUser.background_url) || profileUser.background_url})` }
+              : { backgroundImage: "linear-gradient(135deg, rgba(129, 140, 248, 0.4), rgba(236, 72, 153, 0.4))" }
+          }
+        />
+        <div className="px-5 pb-5 flex flex-col gap-4 sm:flex-row sm:items-end -mt-10">
+          <div className="relative">
+            <div className="h-20 w-20 rounded-full border-4 border-slate-950/80 bg-slate-900/80 overflow-hidden shadow-lg">
+              {profileUser.avatar_url ? (
+                <img
+                  src={resolveMediaUrl(profileUser.avatar_url) || profileUser.avatar_url}
+                  alt={profileUser.username}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-2xl font-semibold bg-slate-800 text-white/80">
+                  {profileUser.username.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            {isOwnProfile && (
+              <>
+                <label className="absolute -bottom-2 right-0 cursor-pointer rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-gray-200 border border-white/20 hover:bg-black">
+                  {uploadingAvatar ? "Uploading…" : "Change"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleAvatarChange(file);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+              </>
+            )}
+          </div>
+          <div className="flex-1 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">
+                {isOwnProfile ? "Your Profile" : `@${profileUser.username}`}
+              </h1>
+              <p className="mt-1 text-xs text-gray-300">
+                Joined {new Date(profileUser.created_at).toLocaleDateString()}
+              </p>
+              <div className="mt-3 flex gap-4 text-xs text-gray-200">
+                <div>
+                  <span className="font-semibold">
+                    {profileUser.followers_count ?? 0}
+                  </span>{" "}
+                  <span className="text-gray-300">Followers</span>
+                </div>
+                <div>
+                  <span className="font-semibold">
+                    {profileUser.following_count ?? 0}
+                  </span>{" "}
+                  <span className="text-gray-300">Following</span>
+                </div>
+              </div>
+            </div>
+            {isOwnProfile && (
+              <div className="flex flex-col items-start gap-2 sm:items-end sm:mb-1">
+                <label className="cursor-pointer rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white border border-white/20 hover:bg-white/20">
+                  {uploadingBackground ? "Uploading…" : "Change background"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingBackground}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleBackgroundChange(file);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-5">
         {err ? <div className="mb-4 text-sm text-red-300">{err}</div> : null}
         <div className="space-y-4 text-sm">

@@ -37,9 +37,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password })
     }),
-  me: () => authedHttp<{ id: string; email: string; username: string; credits_balance: number; details?: string | null }>(`/api/users/me`),
+  me: () =>
+    authedHttp<{
+      id: string;
+      email: string;
+      username: string;
+      avatar_url?: string | null;
+      background_url?: string | null;
+      credits_balance: number;
+      details?: string | null;
+    }>(`/api/users/me`),
   getUserByUsername: (username: string) =>
-    http<{ id: string; username: string; avatar_url?: string | null; details?: string | null; subscription_tier: string; created_at: string }>(
+    http<{
+      id: string;
+      username: string;
+      avatar_url?: string | null;
+      background_url?: string | null;
+      details?: string | null;
+      subscription_tier: string;
+      created_at: string;
+      followers_count: number;
+      following_count: number;
+      is_following?: boolean | null;
+      is_me?: boolean | null;
+    }>(
       `/api/users/username/${encodeURIComponent(username)}`
     ),
   updateUser: (payload: { email?: string; username?: string; details?: string | null }) =>
@@ -47,6 +68,22 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(payload)
     }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return authedHttp<{ avatar_url: string }>(`/api/users/me/avatar`, {
+      method: "POST",
+      body: form
+    });
+  },
+  uploadBackground: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return authedHttp<{ background_url: string }>(`/api/users/me/background`, {
+      method: "POST",
+      body: form
+    });
+  },
   listSongs: (params?: ListSongsParams) => {
     const search = new URLSearchParams();
     if (params?.q) search.set("q", params.q);
