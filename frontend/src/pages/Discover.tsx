@@ -298,7 +298,19 @@ export default function Discover() {
         )}
       </div>
       </div>
-      <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+      <SongDetailSidebar
+        songId={selectedSongId}
+        onClose={() => setSelectedSongId(null)}
+        onLikeChange={({ songId, liked, like_count }) => {
+          setOptimistic((prev) => ({
+            ...prev,
+            [songId]: {
+              like_count,
+              liked_by_me: liked,
+            },
+          }));
+        }}
+      />
     </>
   );
 }

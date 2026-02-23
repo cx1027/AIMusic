@@ -23,9 +23,10 @@ type SongDetailData = {
 type SongDetailSidebarProps = {
   songId: string | null;
   onClose: () => void;
+  onLikeChange?: (update: { songId: string; liked: boolean; like_count: number }) => void;
 };
 
-export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebarProps) {
+export default function SongDetailSidebar({ songId, onClose, onLikeChange }: SongDetailSidebarProps) {
   const [song, setSong] = useState<SongDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +117,13 @@ export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebar
             liked_by_me: res.liked,
           };
         });
+        if (onLikeChange) {
+          onLikeChange({
+            songId: song.id,
+            liked: res.liked,
+            like_count: res.like_count,
+          });
+        }
       })
       .catch(() => {
         // Ignore errors
@@ -188,18 +196,19 @@ export default function SongDetailSidebar({ songId, onClose }: SongDetailSidebar
               </p>
             </div>
 
-            <div className="flex gap-4 text-xs text-gray-400">
+            <div className="flex gap-4 text-xs text-gray-400 items-center">
               <button
                 type="button"
                 onClick={handleToggleLike}
                 disabled={likeLoading}
-                className="inline-flex items-center justify-center rounded-full border border-white/20 p-2 text-white hover:bg-white/10 disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-full border border-white/20 px-3 py-2 text-white hover:bg-white/10 disabled:opacity-60"
                 aria-label={song.liked_by_me ? "Unlike song" : "Like song"}
               >
                 <Heart
                   className="h-4 w-4"
                   fill={song.liked_by_me ? "currentColor" : "none"}
                 />
+                <span className="ml-2 text-xs text-gray-300">{song.like_count}</span>
               </button>
               <button
                 type="button"

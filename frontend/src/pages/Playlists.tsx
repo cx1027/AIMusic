@@ -322,7 +322,28 @@ export default function PlaylistsPage() {
         </div>
       </div>
       </div>
-      <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+      <SongDetailSidebar
+        songId={selectedSongId}
+        onClose={() => setSelectedSongId(null)}
+        onLikeChange={({ songId, liked, like_count }) => {
+          setSelected((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  songs: prev.songs.map((s) =>
+                    s.id === songId
+                      ? {
+                          ...s,
+                          liked_by_me: liked,
+                          like_count,
+                        }
+                      : s
+                  ),
+                }
+              : prev
+          );
+        }}
+      />
     </>
   );
 }

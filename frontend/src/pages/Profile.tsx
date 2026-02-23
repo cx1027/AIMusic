@@ -649,7 +649,23 @@ export default function Profile() {
         </div>
       </div>
     </div>
-    <SongDetailSidebar songId={selectedSongId} onClose={() => setSelectedSongId(null)} />
+    <SongDetailSidebar
+      songId={selectedSongId}
+      onClose={() => setSelectedSongId(null)}
+      onLikeChange={({ songId, liked, like_count }) => {
+        setPublicSongs((prev) =>
+          prev.map((s) =>
+            s.id === songId
+              ? {
+                  ...s,
+                  liked_by_me: liked,
+                  like_count,
+                }
+              : s
+          )
+        );
+      }}
+    />
     </>
   );
 }
