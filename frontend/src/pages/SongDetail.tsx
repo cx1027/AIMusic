@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import DetailPlayer from "../components/player/DetailPlayer";
 import { api, Playlist, PlaylistWithSongs } from "../lib/api";
+import { resolveMediaUrl } from "../lib/media";
 
 type SongDetailData = {
   id: string;
@@ -9,6 +10,7 @@ type SongDetailData = {
   prompt: string;
   lyrics?: string | null;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   duration: number;
   genre?: string | null;
   bpm?: number | null;
@@ -43,6 +45,58 @@ export default function SongDetail() {
       })
       .finally(() => setLoading(false));
   }, [songId]);
+
+  // Update Open Graph meta tags for Facebook sharing
+  useEffect(() => {
+    if (!song) {
+      // Reset to defaults when no song
+      document.title = "AI Music";
+      return;
+    }
+
+    const shareUrl = `${window.location.origin}/songs/${song.id}`;
+    const coverImageUrl = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
+    const description = song.prompt || `Listen to ${song.title} on AI Music`;
+
+    // Update document title
+    document.title = `${song.title} - AI Music`;
+
+    // Helper function to update or create meta tag
+    const updateMetaTag = (property: string, content: string) => {
+      let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute("property", property);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute("content", content);
+    };
+
+    // Update Open Graph tags
+    updateMetaTag("og:title", song.title);
+    updateMetaTag("og:description", description);
+    updateMetaTag("og:url", shareUrl);
+    updateMetaTag("og:type", "music.song");
+    if (coverImageUrl) {
+      updateMetaTag("og:image", coverImageUrl);
+      updateMetaTag("og:image:width", "1200");
+      updateMetaTag("og:image:height", "630");
+    }
+
+    // Also update standard meta tags for better compatibility
+    let metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (!metaDesc) {
+      metaDesc = document.createElement("meta");
+      metaDesc.setAttribute("name", "description");
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute("content", description);
+
+    // Cleanup function to reset meta tags when component unmounts or song changes
+    return () => {
+      document.title = "AI Music";
+    };
+  }, [song]);
 
   // 加载当前用户的所有 playlists
   useEffect(() => {

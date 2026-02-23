@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { resolveMediaUrl } from "../../lib/media";
 import { playerStore } from "../../stores/playerStore";
@@ -63,6 +63,9 @@ export default function SongCard({
   additionalActions,
   footer,
 }: SongCardProps) {
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const shareUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/songs/${encodeURIComponent(song.id)}` : "";
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
   const playingClasses = isPlaying
     ? variant === "card"
@@ -173,7 +176,7 @@ export default function SongCard({
               </div>
             )}
           </div>
-          <div className={`flex items-center ${variant === "card" ? "gap-3" : "gap-2"} text-xs`}>
+          <div className={`relative flex items-center ${variant === "card" ? "gap-3" : "gap-2"} text-xs`}>
             {showPlayButton && (
               <>
                 {song.audio_url ? (
@@ -230,6 +233,88 @@ export default function SongCard({
               </button>
             )}
             {additionalActions}
+            <button
+              type="button"
+              className="rounded-md border border-white/20 bg-black/40 px-3 py-2 text-xs text-gray-200 hover:border-blue-400 hover:text-blue-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShareMenuOpen((open) => !open);
+              }}
+            >
+              Share
+            </button>
+            {isShareMenuOpen && (
+              <div className="absolute right-0 top-9 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">
+                <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                  Share track
+                </div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    void navigator.clipboard.writeText(shareUrl);
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Copy link</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    // Use Facebook's sharer.php endpoint with URL parameter
+                    // Facebook will scrape the page for Open Graph tags (og:image, og:title, etc.)
+                    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to Facebook</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                      shareUrl
+                    )}&text=${encodeURIComponent(song.title || "Check out this track")}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to X</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    const url = `https://www.reddit.com/submit?url=${encodeURIComponent(
+                      shareUrl
+                    )}&title=${encodeURIComponent(song.title || "AIMusic track")}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to Reddit</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    void navigator.clipboard.writeText(shareUrl);
+                    window.alert("Link copied. Share it in WeChat.");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to WeChat</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -242,7 +327,7 @@ export default function SongCard({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="relative flex items-center gap-3">
             {showPlayButton && (
               <>
                 {song.audio_url ? (
@@ -295,6 +380,88 @@ export default function SongCard({
                   ? "Public"
                   : "Private"}
               </button>
+            )}
+            <button
+              type="button"
+              className="rounded-md border border-white/20 bg-black/40 px-3 py-2 text-xs text-gray-200 hover:border-blue-400 hover:text-blue-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShareMenuOpen((open) => !open);
+              }}
+            >
+              Share
+            </button>
+            {isShareMenuOpen && (
+              <div className="absolute right-0 top-9 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">
+                <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                  Share track
+                </div>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    void navigator.clipboard.writeText(shareUrl);
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Copy link</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    // Use Facebook's sharer.php endpoint with URL parameter
+                    // Facebook will scrape the page for Open Graph tags (og:image, og:title, etc.)
+                    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to Facebook</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                      shareUrl
+                    )}&text=${encodeURIComponent(song.title || "Check out this track")}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to X</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    const url = `https://www.reddit.com/submit?url=${encodeURIComponent(
+                      shareUrl
+                    )}&title=${encodeURIComponent(song.title || "AIMusic track")}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to Reddit</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10"
+                  onClick={() => {
+                    if (!shareUrl) return;
+                    void navigator.clipboard.writeText(shareUrl);
+                    window.alert("Link copied. Share it in WeChat.");
+                    setIsShareMenuOpen(false);
+                  }}
+                >
+                  <span>Share to WeChat</span>
+                </button>
+              </div>
             )}
           </div>
         </>
