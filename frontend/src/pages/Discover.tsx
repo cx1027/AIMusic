@@ -239,7 +239,7 @@ export default function Discover() {
                         disabled={isLoading}
                         className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {isLoading ? "…" : state.liked_by_me ? "Liked" : "Like"} {state.like_count}
+                        {isLoading ? "…" : state.liked_by_me ? "❤️" : "🤍"} {state.like_count}
                       </button>
                       <button
                         type="button"

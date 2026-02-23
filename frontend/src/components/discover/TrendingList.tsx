@@ -81,7 +81,7 @@ export default function TrendingList(props: { songs: DiscoverSong[] }) {
               disabled={isLoading}
               className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] text-white hover:bg-white/10 disabled:opacity-60"
             >
-              {isLoading ? "…" : state.liked_by_me ? "Liked" : "Like"}
+              {isLoading ? "…" : state.liked_by_me ? "❤️" : "🤍"}
             </button>
           </div>
         );
