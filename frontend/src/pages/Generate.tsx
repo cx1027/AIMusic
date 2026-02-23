@@ -184,7 +184,14 @@ export default function Generate() {
 
   function toggleGenre(g: Genre) {
     setGenresAuto(false);
-    setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+    setGenres((prev) => {
+      // If already selected, remove it
+      if (prev.includes(g)) {
+        return prev.filter((x) => x !== g);
+      }
+      // If newly selected, make it the primary genre (first in the list)
+      return [g, ...prev.filter((x) => x !== g)];
+    });
   }
 
   async function start() {

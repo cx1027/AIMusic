@@ -94,7 +94,8 @@ def get_song(
     user: User = Depends(get_current_user),
 ) -> SongPublic:
     song = db.get(Song, song_id)
-    if not song or song.user_id != user.id:
+    # Allow owners to see all their songs, and non-owners to see public songs
+    if not song or (not song.is_public and song.user_id != user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
     liked = db.exec(
         select(SongLike).where(

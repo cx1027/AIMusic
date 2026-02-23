@@ -170,10 +170,10 @@ export default function SongDetailSidebar({ songId, onClose, onLikeChange }: Son
             </div>
 
             <div className="flex gap-4 text-xs text-gray-400 items-center">
-              <button
-                type="button"
-                onClick={handleToggleLike}
-                disabled={likeLoading}
+                  <button
+                    type="button"
+                    onClick={handleToggleLike}
+                    disabled={likeLoading}
                 className="inline-flex items-center justify-center rounded-full border border-white/20 px-3 py-2 text-white hover:bg-white/10 disabled:opacity-60"
                 aria-label={song.liked_by_me ? "Unlike song" : "Like song"}
               >
@@ -182,7 +182,7 @@ export default function SongDetailSidebar({ songId, onClose, onLikeChange }: Son
                   fill={song.liked_by_me ? "currentColor" : "none"}
                 />
                 <span className="ml-2 text-xs text-gray-300">{song.like_count}</span>
-              </button>
+                  </button>
             </div>
 
             <div className="space-y-4">
