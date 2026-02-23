@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Heart, Share2 } from "lucide-react";
+import { X, Heart } from "lucide-react";
 import { api, Playlist, PlaylistWithSongs } from "../../lib/api";
 import { resolveMediaUrl } from "../../lib/media";
 
@@ -131,33 +131,6 @@ export default function SongDetailSidebar({ songId, onClose, onLikeChange }: Son
       .finally(() => setLikeLoading(false));
   };
 
-  const handleShare = () => {
-    if (!song) return;
-    const url =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/songs/${song.id}`
-        : `/songs/${song.id}`;
-
-    if (typeof navigator !== "undefined" && (navigator as any).share) {
-      (navigator as any)
-        .share({
-          title: song.title,
-          text: "Check out this song I generated!",
-          url,
-        })
-        .catch(() => {
-          // ignore share cancel/errors
-        });
-      return;
-    }
-
-    if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).catch(() => {
-        // ignore clipboard errors
-      });
-    }
-  };
-
   if (!songId) return null;
 
   return (
@@ -209,14 +182,6 @@ export default function SongDetailSidebar({ songId, onClose, onLikeChange }: Son
                   fill={song.liked_by_me ? "currentColor" : "none"}
                 />
                 <span className="ml-2 text-xs text-gray-300">{song.like_count}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShare}
-                className="inline-flex items-center justify-center rounded-full border border-white/20 p-2 text-white hover:bg-white/10"
-                aria-label="Share song"
-              >
-                <Share2 className="h-4 w-4" />
               </button>
             </div>
 
