@@ -11,10 +11,146 @@ type GenState = {
   result?: { song_id?: string; audio_url?: string; cover_image_url?: string };
 };
 
+const ALL_GENRES = [
+  "Electronic",
+  "Ambient",
+  "Cinematic",
+  "Lo-Fi",
+  "Rock",
+  "Jazz",
+  "Classical",
+  "Hip-Hop",
+  "Pop",
+  "R&B",
+  "Other",
+] as const;
+
+type Genre = (typeof ALL_GENRES)[number];
+
+function inferGenresFromPrompt(prompt: string): Genre[] {
+  const text = prompt.toLowerCase();
+  const genres = new Set<Genre>();
+
+  if (!text.trim()) {
+    return [];
+  }
+
+  // Electronic
+  if (text.includes("electronic") || text.includes("edm") || text.includes("synth")) {
+    genres.add("Electronic");
+  }
+
+  // Ambient
+  if (
+    text.includes("ambient") ||
+    text.includes("atmospheric") ||
+    text.includes("soundscape") ||
+    text.includes("drone")
+  ) {
+    genres.add("Ambient");
+  }
+
+  // Cinematic
+  if (
+    text.includes("cinematic") ||
+    text.includes("film score") ||
+    text.includes("orchestral") ||
+    text.includes("epic") ||
+    text.includes("trailer")
+  ) {
+    genres.add("Cinematic");
+  }
+
+  // Lo-Fi
+  if (
+    text.includes("lofi") ||
+    text.includes("lo-fi") ||
+    text.includes("chill") ||
+    text.includes("study") ||
+    text.includes("coffee shop")
+  ) {
+    genres.add("Lo-Fi");
+  }
+
+  // Rock
+  if (
+    text.includes("rock") ||
+    text.includes("guitar") ||
+    text.includes("indie") ||
+    text.includes("punk") ||
+    text.includes("metal")
+  ) {
+    genres.add("Rock");
+  }
+
+  // Jazz
+  if (
+    text.includes("jazz") ||
+    text.includes("swing") ||
+    text.includes("sax") ||
+    text.includes("saxophone") ||
+    text.includes("bebop")
+  ) {
+    genres.add("Jazz");
+  }
+
+  // Classical
+  if (
+    text.includes("classical") ||
+    text.includes("symphony") ||
+    text.includes("piano solo") ||
+    text.includes("baroque") ||
+    text.includes("romantic era")
+  ) {
+    genres.add("Classical");
+  }
+
+  // Hip-Hop
+  if (
+    text.includes("hip hop") ||
+    text.includes("hip-hop") ||
+    text.includes("rap") ||
+    text.includes("boom bap") ||
+    text.includes("trap")
+  ) {
+    genres.add("Hip-Hop");
+  }
+
+  // Pop
+  if (
+    text.includes("pop") ||
+    text.includes("catchy") ||
+    text.includes("radio") ||
+    text.includes("chart") ||
+    text.includes("dance pop")
+  ) {
+    genres.add("Pop");
+  }
+
+  // R&B
+  if (
+    text.includes("r&b") ||
+    text.includes("rnb") ||
+    text.includes("soul") ||
+    text.includes("neo-soul") ||
+    text.includes("slow jam")
+  ) {
+    genres.add("R&B");
+  }
+
+  if (genres.size === 0) {
+    genres.add("Other");
+  }
+
+  return Array.from(genres);
+}
+
 export default function Generate() {
   const token = getAccessToken();
   const [title, setTitle] = useState("My new song");
   const [prompt, setPrompt] = useState("lofi chill beats, rainy night");
+  const [genres, setGenres] = useState<Genre[]>(() => inferGenresFromPrompt("lofi chill beats, rainy night"));
+  const [genresAuto, setGenresAuto] = useState<boolean>(true);
   const [lyrics, setLyrics] = useState<string>("");
   const [duration, setDuration] = useState<number>(30);
   const [err, setErr] = useState<string | null>(null);
@@ -39,6 +175,17 @@ export default function Generate() {
       });
     }
   }, [state, coverImageUrl, coverImageSrc]);
+
+  useEffect(() => {
+    if (genresAuto) {
+      setGenres(inferGenresFromPrompt(prompt));
+    }
+  }, [prompt, genresAuto]);
+
+  function toggleGenre(g: Genre) {
+    setGenresAuto(false);
+    setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+  }
 
   async function start() {
     if (!token) return;
@@ -103,6 +250,34 @@ export default function Generate() {
             />
           </div>
           <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-200">Genre tags</label>
+              <span className="text-xs text-gray-400">
+                {genresAuto ? "Auto from prompt – click to adjust" : "Manual – click to toggle"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ALL_GENRES.map((g) => {
+                const active = genres.includes(g);
+                return (
+                  <span
+                    key={g}
+                    onClick={() => toggleGenre(g)}
+                    className={
+                      "inline-flex cursor-pointer items-center rounded-full border px-3 py-1 text-xs transition-colors " +
+                      (active
+                        ? "border-white bg-white text-black"
+                        : "border-white/20 bg-black/30 text-gray-300")
+                    }
+                    aria-pressed={active}
+                  >
+                    {g}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-1">
             <label className="text-sm text-gray-200">Lyrics (optional)</label>
             <textarea
               value={lyrics}
@@ -141,6 +316,23 @@ export default function Generate() {
                 <div className="h-2 bg-white" style={{ width: `${state.progress}%` }} />
               </div>
               <div className="text-sm text-gray-300">{state.message}</div>
+              <div className="space-y-1 pt-2">
+                <div className="text-sm text-gray-200">Genres</div>
+                <div className="flex flex-wrap gap-2">
+                  {genres.length === 0 ? (
+                    <span className="text-xs text-gray-400">None selected</span>
+                  ) : (
+                    genres.map((g) => (
+                      <span
+                        key={g}
+                        className="inline-flex items-center rounded-full border border-white/30 bg-black/40 px-2 py-0.5 text-xs text-gray-100"
+                      >
+                        {g}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
               {coverImageSrc ? (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-200">Cover Image</div>
