@@ -56,6 +56,10 @@ def create_generation(
     if lyrics is not None:
         lyrics = str(lyrics)
 
+    genre = payload.get("genre")
+    if genre is not None:
+        genre = str(genre).strip() or None
+
     # Simple credits gate for MVP - each song costs 2 credits
     if user.credits_balance < 2:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Insufficient credits. Each song costs 2 credits.")
@@ -68,11 +72,17 @@ def create_generation(
     init_task(
         task_id,
         user_id=str(user.id),
-        payload={"title": title, "prompt": prompt, "lyrics": lyrics, "duration": duration_int},
+        payload={"title": title, "prompt": prompt, "lyrics": lyrics, "duration": duration_int, "genre": genre},
     )
 
     run_generation_task.delay(
-        task_id=task_id, user_id=str(user.id), title=title, prompt=prompt, lyrics=lyrics, duration=duration_int
+        task_id=task_id,
+        user_id=str(user.id),
+        title=title,
+        prompt=prompt,
+        lyrics=lyrics,
+        duration=duration_int,
+        genre=genre,
     )
 
     return {"task_id": task_id, "events_url": f"/api/generate/events/{task_id}"}

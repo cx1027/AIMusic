@@ -25,6 +25,7 @@ def run_generation_task(
     lyrics: str | None,
     duration: int,
     title: str | None = None,
+    genre: str | None = None,
     **_ignored: object,
 ) -> dict:
     try:
@@ -87,6 +88,7 @@ def run_generation_task(
                 bpm=res.bpm,
                 audio_url=stored.url,
                 cover_image_url=cover_image_url,
+                genre=genre,
             )
             db.add(song)
             db.commit()

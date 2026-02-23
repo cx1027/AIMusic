@@ -195,8 +195,15 @@ export default function Generate() {
       esRef.current.close();
       esRef.current = null;
     }
+    const primaryGenre = genres.length > 0 ? genres[0] : null;
     try {
-      const res = await api.generate(prompt, lyrics.trim() ? lyrics : null, duration, title.trim() ? title.trim() : null);
+      const res = await api.generate(
+        prompt,
+        lyrics.trim() ? lyrics : null,
+        duration,
+        title.trim() ? title.trim() : null,
+        primaryGenre
+      );
       const url = `${API_BASE}${res.events_url}?token=${encodeURIComponent(token)}`;
       // NOTE: backend uses Authorization header, but SSE can't set headers; we pass token via query and handle it server-side
       // if you don't want query tokens, switch to cookie auth.

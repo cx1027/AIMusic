@@ -93,7 +93,8 @@ def test_generate_success(client: TestClient, test_user: tuple[User, str]):
             json={
                 "prompt": "A happy upbeat song",
                 "duration": 30,
-                "lyrics": None
+                "lyrics": None,
+                "genre": "Pop",
             },
             headers={"Authorization": f"Bearer {token}"}
         )
@@ -114,6 +115,7 @@ def test_generate_success(client: TestClient, test_user: tuple[User, str]):
         assert call_kwargs["prompt"] == "A happy upbeat song"
         assert call_kwargs["duration"] == 30
         assert call_kwargs["lyrics"] is None
+        assert call_kwargs["genre"] == "Pop"
 
 
 def test_generate_with_lyrics(client: TestClient, test_user: tuple[User, str]):

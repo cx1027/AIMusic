@@ -16,6 +16,21 @@ type SongRow = {
   liked_by_me?: boolean;
 };
 
+const LIBRARY_GENRES = [
+  { value: "", label: "All genres" },
+  { value: "Electronic", label: "Electronic" },
+  { value: "Ambient", label: "Ambient" },
+  { value: "Cinematic", label: "Cinematic" },
+  { value: "Lo-Fi", label: "Lo-Fi" },
+  { value: "Rock", label: "Rock" },
+  { value: "Jazz", label: "Jazz" },
+  { value: "Classical", label: "Classical" },
+  { value: "Hip-Hop", label: "Hip-Hop" },
+  { value: "Pop", label: "Pop" },
+  { value: "R&B", label: "R&B" },
+  { value: "Other", label: "Other / Mixed" },
+] as const;
+
 export default function Library() {
   const [songs, setSongs] = useState<SongRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -169,14 +184,19 @@ export default function Library() {
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
-            <div className="w-full md:w-40">
+            <div className="w-full md:w-48">
               <label className="block text-xs font-medium text-gray-400">Genre</label>
-              <input
+              <select
                 className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-sm text-white outline-none focus:border-white/30"
-                placeholder="e.g. pop, rock"
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
-              />
+              >
+                {LIBRARY_GENRES.map((g) => (
+                  <option key={g.value || "all"} value={g.value}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="w-full md:w-40">

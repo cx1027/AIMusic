@@ -31,6 +31,21 @@ type DiscoverResponse = {
 
 type DiscoverOrder = "newest" | "popular" | "style";
 
+const DISCOVER_GENRES = [
+  { value: "", label: "All genres" },
+  { value: "Electronic", label: "Electronic" },
+  { value: "Ambient", label: "Ambient" },
+  { value: "Cinematic", label: "Cinematic" },
+  { value: "Lo-Fi", label: "Lo-Fi" },
+  { value: "Rock", label: "Rock" },
+  { value: "Jazz", label: "Jazz" },
+  { value: "Classical", label: "Classical" },
+  { value: "Hip-Hop", label: "Hip-Hop" },
+  { value: "Pop", label: "Pop" },
+  { value: "R&B", label: "R&B" },
+  { value: "Other", label: "Other / Mixed" },
+] as const;
+
 export default function Discover() {
   const [data, setData] = useState<DiscoverResponse | null>(null);
   const [genre, setGenre] = useState<string | null>(null);
@@ -169,17 +184,16 @@ export default function Discover() {
         <div className={`mt-6 rounded-xl border border-white/10 bg-white/5 p-5 transition-all ${selectedSongId ? 'max-w-3xl' : ''}`}>
         <div className="flex flex-col gap-3 border-b border-white/5 pb-4 text-sm md:flex-row md:items-end md:justify-between">
           <div className="flex flex-1 flex-col gap-2 md:flex-row">
-            <div className="w-full md:w-40">
+            <div className="w-full md:w-48">
               <label className="block text-xs font-medium text-gray-400">Genre</label>
               <select
                 className="mt-1 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-sm text-white outline-none focus:border-white/30"
                 value={genre || ""}
                 onChange={(e) => setGenre(e.target.value || null)}
               >
-                <option value="">All</option>
-                {["pop", "rock", "hiphop", "electronic", "jazz"].map((g) => (
-                  <option key={g} value={g}>
-                    {g}
+                {DISCOVER_GENRES.map((g) => (
+                  <option key={g.value || "all"} value={g.value}>
+                    {g.label}
                   </option>
                 ))}
               </select>

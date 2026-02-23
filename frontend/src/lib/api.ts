@@ -130,10 +130,16 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ is_public: isPublic })
     }),
-  generate: (prompt: string, lyrics: string | null, duration: number, title?: string | null) =>
+  generate: (
+    prompt: string,
+    lyrics: string | null,
+    duration: number,
+    title?: string | null,
+    genre?: string | null
+  ) =>
     authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
       method: "POST",
-      body: JSON.stringify({ prompt, lyrics, duration, title })
+      body: JSON.stringify({ prompt, lyrics, duration, title, genre })
     }),
   listPlaylists: () => authedHttp<Playlist[]>(`/api/playlists`),
   createPlaylist: (name: string, description?: string | null) =>
