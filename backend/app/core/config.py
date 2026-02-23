@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # FLUX.1 Schnell (local inference)
     flux_model_dir: str = "models/flux_schnell"  # Path to local Flux Schnell checkpoints
     flux_device: str = "mps"  # mps (Mac), cuda, cpu
-    huggingface_token: str = ""  # Hugging Face token for accessing gated models (FLUX.1-schnell)
+    huggingface_token: str = ""  # Hugging Face token for accessing gated models (FLUX.1-schnell) - set via HUGGINGFACE_TOKEN env var
 
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
