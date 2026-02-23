@@ -59,6 +59,8 @@ export const api = {
         audio_url?: string | null;
         created_at: string;
         is_public: boolean;
+        like_count?: number;
+        liked_by_me?: boolean;
       }>
     >(url);
   },

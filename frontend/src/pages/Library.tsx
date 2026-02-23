@@ -6,7 +6,15 @@ import { playerStore } from "../stores/playerStore";
 import SongDetailSidebar from "../components/song/SongDetailSidebar";
 import SongCard from "../components/song/SongCard";
 
-type SongRow = { id: string; title: string; audio_url?: string | null; created_at: string; is_public: boolean };
+type SongRow = {
+  id: string;
+  title: string;
+  audio_url?: string | null;
+  created_at: string;
+  is_public: boolean;
+  like_count?: number;
+  liked_by_me?: boolean;
+};
 
 export default function Library() {
   const [songs, setSongs] = useState<SongRow[]>([]);
@@ -21,6 +29,7 @@ export default function Library() {
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [updatingVisibilityId, setUpdatingVisibilityId] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
@@ -50,6 +59,29 @@ export default function Library() {
       setErr(e?.message || "Failed to update visibility");
     } finally {
       setUpdatingVisibilityId(null);
+    }
+  };
+
+  const handleToggleLike = async (song: SongRow) => {
+    setErr(null);
+    try {
+      setLikingId(song.id);
+      const result = await api.toggleLikeSong(song.id);
+      setSongs((prev) =>
+        prev.map((x) =>
+          x.id === song.id
+            ? {
+                ...x,
+                liked_by_me: result.liked,
+                like_count: result.like_count
+              }
+            : x
+        )
+      );
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update like");
+    } finally {
+      setLikingId(null);
     }
   };
 
@@ -175,12 +207,15 @@ export default function Library() {
                 variant="card"
                 isPlaying={isPlaying}
                 showPlayButton={true}
+                showLikeButton={true}
                 showVisibilityToggle={true}
                 showDate={true}
                 onPlay={() => handlePlaySong(s)}
+                onLike={() => handleToggleLike(s)}
                 onToggleVisibility={() => handleToggleVisibility(s)}
                 onSelect={() => setSelectedSongId(s.id)}
                 isUpdatingVisibility={updatingVisibilityId === s.id}
+                isLoading={likingId === s.id}
                 additionalActions={
                   <>
                   <button
