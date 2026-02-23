@@ -57,6 +57,14 @@ export default function Profile() {
   const [uploadingBackground, setUploadingBackground] = useState(false);
   const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showFollowList, setShowFollowList] = useState<null | "followers" | "following">(null);
+  const [followers, setFollowers] = useState<
+    Array<{ id: string; username: string; avatar_url?: string | null; details?: string | null }>
+  >([]);
+  const [following, setFollowing] = useState<
+    Array<{ id: string; username: string; avatar_url?: string | null; details?: string | null }>
+  >([]);
+  const [followListLoading, setFollowListLoading] = useState(false);
 
   const isOwnProfile = currentUser && profileUser && currentUser.id === profileUser.id;
 
@@ -373,6 +381,26 @@ export default function Profile() {
     }
   };
 
+  const handleOpenFollowList = async (type: "followers" | "following") => {
+    if (!profileUser) return;
+    setShowFollowList(type);
+    setFollowListLoading(true);
+    setErr(null);
+    try {
+      if (type === "followers") {
+        const data = await api.getFollowers(profileUser.id);
+        setFollowers(data);
+      } else {
+        const data = await api.getFollowing(profileUser.id);
+        setFollowing(data);
+      }
+    } catch (e: any) {
+      setErr(e?.message || `Failed to load ${type}`);
+    } finally {
+      setFollowListLoading(false);
+    }
+  };
+
   const handlePlaySong = (song: Song) => {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
@@ -466,18 +494,26 @@ export default function Profile() {
                 Joined {new Date(profileUser.created_at).toLocaleDateString()}
               </p>
               <div className="mt-3 flex gap-4 text-xs text-gray-200">
-                <div>
+                <button
+                  type="button"
+                  className="text-left hover:text-white transition"
+                  onClick={() => void handleOpenFollowList("followers")}
+                >
                   <span className="font-semibold">
                     {profileUser.followers_count ?? 0}
                   </span>{" "}
                   <span className="text-gray-300">Followers</span>
-                </div>
-                <div>
+                </button>
+                <button
+                  type="button"
+                  className="text-left hover:text-white transition"
+                  onClick={() => void handleOpenFollowList("following")}
+                >
                   <span className="font-semibold">
                     {profileUser.following_count ?? 0}
                   </span>{" "}
                   <span className="text-gray-300">Following</span>
-                </div>
+                </button>
               </div>
             </div>
             {currentUser && !isOwnProfile && (
@@ -729,6 +765,99 @@ export default function Profile() {
         );
       }}
     />
+    {showFollowList && (
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-white/10 shadow-xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <h2 className="text-sm font-semibold text-white">
+              {showFollowList === "followers" ? "Followers" : "Following"}
+            </h2>
+            <button
+              type="button"
+              className="text-xs text-gray-300 hover:text-white"
+              onClick={() => setShowFollowList(null)}
+            >
+              Close
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto px-4 py-3 text-sm">
+            {followListLoading ? (
+              <div className="text-gray-300">Loading…</div>
+            ) : showFollowList === "followers" ? (
+              followers.length === 0 ? (
+                <div className="text-gray-400">No followers yet.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {followers.map((u) => (
+                    <li key={u.id}>
+                      <Link
+                        to={`/profile/${encodeURIComponent(u.username)}`}
+                        className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/5"
+                        onClick={() => setShowFollowList(null)}
+                      >
+                        <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-semibold text-white/80 overflow-hidden">
+                          {u.avatar_url ? (
+                            <img
+                              src={resolveMediaUrl(u.avatar_url) || u.avatar_url}
+                              alt={u.username}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            u.username.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate text-white text-xs">@{u.username}</div>
+                          {u.details && (
+                            <div className="truncate text-[11px] text-gray-400">
+                              {u.details}
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : following.length === 0 ? (
+              <div className="text-gray-400">Not following anyone yet.</div>
+            ) : (
+              <ul className="space-y-2">
+                {following.map((u) => (
+                  <li key={u.id}>
+                    <Link
+                      to={`/profile/${encodeURIComponent(u.username)}`}
+                      className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/5"
+                      onClick={() => setShowFollowList(null)}
+                    >
+                      <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-semibold text-white/80 overflow-hidden">
+                        {u.avatar_url ? (
+                          <img
+                            src={resolveMediaUrl(u.avatar_url) || u.avatar_url}
+                            alt={u.username}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          u.username.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-white text-xs">@{u.username}</div>
+                        {u.details && (
+                          <div className="truncate text-[11px] text-gray-400">
+                            {u.details}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }

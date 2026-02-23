@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.api.deps import get_current_user, get_current_user_optional, get_db
-from app.models.user import User, UserPublic, UserPublicProfile, UserUpdate
+from app.models.user import User, UserPublic, UserPublicProfile, UserPublicCompact, UserUpdate
 from app.models.user_follow import UserFollow
 from app.services.storage_service import get_storage
 
@@ -234,5 +234,62 @@ def get_user_by_username(
         is_following=is_following,
         is_me=is_me,
     )
+
+
+
+@router.get("/{user_id}/followers", response_model=list[UserPublicCompact])
+def list_followers(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current: User | None = Depends(get_current_user_optional),
+) -> list[UserPublicCompact]:
+    """List users who follow the given user."""
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    follower_users = db.exec(
+        select(User)
+        .join(UserFollow, User.id == UserFollow.follower_id)
+        .where(UserFollow.following_id == user_id)
+    ).all()
+
+    return [
+        UserPublicCompact(
+            id=u.id,
+            username=u.username,
+            avatar_url=u.avatar_url,
+            details=u.details,
+        )
+        for u in follower_users
+    ]
+
+
+@router.get("/{user_id}/following", response_model=list[UserPublicCompact])
+def list_following(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current: User | None = Depends(get_current_user_optional),
+) -> list[UserPublicCompact]:
+    """List users that the given user is following."""
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    following_users = db.exec(
+        select(User)
+        .join(UserFollow, User.id == UserFollow.following_id)
+        .where(UserFollow.follower_id == user_id)
+    ).all()
+
+    return [
+        UserPublicCompact(
+            id=u.id,
+            username=u.username,
+            avatar_url=u.avatar_url,
+            details=u.details,
+        )
+        for u in following_users
+    ]
 
 

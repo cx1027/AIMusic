@@ -78,3 +78,12 @@ class UserPublicProfile(SQLModel):
     is_me: Optional[bool] = None
 
 
+class UserPublicCompact(SQLModel):
+    """Lightweight public user representation for follower/following lists."""
+    id: UUID
+    username: str
+    avatar_url: Optional[str] = None
+    details: Optional[str] = None
+
+
+

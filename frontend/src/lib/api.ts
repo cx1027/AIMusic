@@ -250,7 +250,25 @@ export const api = {
         }>
       >(`/api/songs/user/${userId}/public`)
     );
-  }
+  },
+  getFollowers: (userId: string) =>
+    http<
+      Array<{
+        id: string;
+        username: string;
+        avatar_url?: string | null;
+        details?: string | null;
+      }>
+    >(`/api/users/${userId}/followers`),
+  getFollowing: (userId: string) =>
+    http<
+      Array<{
+        id: string;
+        username: string;
+        avatar_url?: string | null;
+        details?: string | null;
+      }>
+    >(`/api/users/${userId}/following`),
 };
 
 
