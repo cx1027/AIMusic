@@ -12,6 +12,8 @@ type Song = {
   audio_url?: string | null;
   created_at: string;
   is_public: boolean;
+  like_count?: number;
+  liked_by_me?: boolean;
 };
 
 export default function Profile() {
@@ -51,6 +53,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [publicSongs, setPublicSongs] = useState<Song[]>([]);
   const [songsLoading, setSongsLoading] = useState(false);
+  const [totalLikes, setTotalLikes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -164,6 +167,11 @@ export default function Profile() {
         .then((songs) => {
           const publicSongsList = songs.filter((s) => s.is_public);
           setPublicSongs(publicSongsList);
+          const likesSum = publicSongsList.reduce(
+            (sum, s) => sum + (s.like_count ?? 0),
+            0
+          );
+          setTotalLikes(likesSum);
         })
         .catch((e: any) => setErr(e?.message || "Failed to load songs"))
         .finally(() => setSongsLoading(false));
@@ -173,6 +181,11 @@ export default function Profile() {
         .getPublicSongsByUser(profileUser.id)
         .then((songs: any) => {
           setPublicSongs(songs);
+          const likesSum = (songs as Song[]).reduce(
+            (sum, s) => sum + (s.like_count ?? 0),
+            0
+          );
+          setTotalLikes(likesSum);
         })
         .catch((e: any) => {
           setErr(e?.message || "Failed to load songs");
@@ -514,6 +527,12 @@ export default function Profile() {
                   </span>{" "}
                   <span className="text-gray-300">Following</span>
                 </button>
+                <div className="text-left">
+                  <span className="font-semibold">
+                    {totalLikes}
+                  </span>{" "}
+                  <span className="text-gray-300">Likes</span>
+                </div>
               </div>
             </div>
             {currentUser && !isOwnProfile && (
@@ -752,17 +771,23 @@ export default function Profile() {
       songId={selectedSongId}
       onClose={() => setSelectedSongId(null)}
       onLikeChange={({ songId, liked, like_count }) => {
-        setPublicSongs((prev) =>
-          prev.map((s) =>
-            s.id === songId
-              ? {
-                  ...s,
-                  liked_by_me: liked,
-                  like_count,
-                }
-              : s
-          )
+      setPublicSongs((prev) => {
+        const next = prev.map((s) =>
+          s.id === songId
+            ? {
+                ...s,
+                liked_by_me: liked,
+                like_count,
+              }
+            : s
         );
+        const likesSum = next.reduce(
+          (sum, s) => sum + (s.like_count ?? 0),
+          0
+        );
+        setTotalLikes(likesSum);
+        return next;
+      });
       }}
     />
     {showFollowList && (
