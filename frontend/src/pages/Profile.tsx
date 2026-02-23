@@ -38,6 +38,8 @@ export default function Profile() {
     created_at: string;
     followers_count?: number;
     following_count?: number;
+    is_following?: boolean | null;
+    is_me?: boolean | null;
   } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
@@ -53,6 +55,8 @@ export default function Profile() {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [isFollowing, setIsFollowing] = useState<boolean | null>(null);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const isOwnProfile = currentUser && profileUser && currentUser.id === profileUser.id;
 
@@ -111,6 +115,7 @@ export default function Profile() {
           try {
             const userProfile = await api.getUserByUsername(username);
             setProfileUser(userProfile);
+            setIsFollowing(userProfile.is_following ?? null);
             setLoading(false);
           } catch (e: any) {
             setErr(e?.message || "User not found");
@@ -123,6 +128,7 @@ export default function Profile() {
           try {
             const userProfile = await api.getUserByUsername(username);
             setProfileUser(userProfile);
+            setIsFollowing(userProfile.is_following ?? null);
             setLoading(false);
           } catch (err: any) {
             setErr(err?.message || "User not found");
@@ -330,6 +336,43 @@ export default function Profile() {
     }
   };
 
+  const handleToggleFollow = async () => {
+    if (!currentUser || !profileUser || isOwnProfile) return;
+
+    setFollowLoading(true);
+    setErr(null);
+
+    try {
+      if (isFollowing) {
+        await api.unfollowUser(profileUser.id);
+        setIsFollowing(false);
+        setProfileUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                followers_count: Math.max((prev.followers_count ?? 1) - 1, 0),
+              }
+            : prev
+        );
+      } else {
+        await api.followUser(profileUser.id);
+        setIsFollowing(true);
+        setProfileUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                followers_count: (prev.followers_count ?? 0) + 1,
+              }
+            : prev
+        );
+      }
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update follow status");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const handlePlaySong = (song: Song) => {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
@@ -437,6 +480,26 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+            {currentUser && !isOwnProfile && (
+              <div className="flex items-center sm:mb-1">
+                <button
+                  type="button"
+                  onClick={() => void handleToggleFollow()}
+                  disabled={followLoading}
+                  className={`inline-flex items-center rounded-full px-4 py-1.5 text-xs font-medium border transition ${
+                    isFollowing
+                      ? "border-white/40 bg-white/15 text-white hover:bg-white/25"
+                      : "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  {followLoading
+                    ? "Updating…"
+                    : isFollowing
+                    ? "Following"
+                    : "Follow"}
+                </button>
+              </div>
+            )}
             {isOwnProfile && (
               <div className="flex flex-col items-start gap-2 sm:items-end sm:mb-1">
                 <label className="cursor-pointer rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white border border-white/20 hover:bg-white/20">
