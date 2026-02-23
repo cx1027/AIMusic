@@ -81,7 +81,7 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       ws.un("pause", onPause);
       ws.un("timeupdate", onTimeUpdate);
       try {
-        ws.destroy();
+      ws.destroy();
       } catch (e) {
         // Ignore errors during cleanup (e.g., AbortError from aborted fetch)
         console.debug("Error during wavesurfer cleanup:", e);

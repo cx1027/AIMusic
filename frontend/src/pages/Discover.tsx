@@ -257,38 +257,38 @@ export default function Discover() {
                   }
                   footer={
                     activeSongId === s.id ? (
-                      <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                        {playlistsLoading ? (
-                          <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                        ) : playlists && playlists.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                              Add to playlist:
-                            </span>
-                            {playlists.map((pl) => (
-                              <button
-                                key={pl.id}
-                                type="button"
-                                className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={addingToId === pl.id}
-                                onClick={() => handleAddToPlaylist(pl.id, s.id)}
-                              >
-                                {addingToId === pl.id ? "Adding…" : pl.name}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>You don&apos;t have any playlists yet.</span>
-                            <Link
-                              to="/playlists"
-                              className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                    <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
+                      {playlistsLoading ? (
+                        <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
+                      ) : playlists && playlists.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
+                            Add to playlist:
+                          </span>
+                          {playlists.map((pl) => (
+                            <button
+                              key={pl.id}
+                              type="button"
+                              className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={addingToId === pl.id}
+                              onClick={() => handleAddToPlaylist(pl.id, s.id)}
                             >
-                              Create a playlist
-                            </Link>
-                          </div>
-                        )}
-                      </div>
+                              {addingToId === pl.id ? "Adding…" : pl.name}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>You don&apos;t have any playlists yet.</span>
+                          <Link
+                            to="/playlists"
+                            className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                          >
+                            Create a playlist
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                     ) : null
                   }
                 />

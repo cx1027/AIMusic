@@ -170,7 +170,7 @@ export default function Library() {
             const isPlaying = currentPlayingId === s.id;
             return (
               <SongCard
-                key={s.id}
+              key={s.id}
                 song={s}
                 variant="card"
                 isPlaying={isPlaying}
@@ -183,74 +183,74 @@ export default function Library() {
                 isUpdatingVisibility={updatingVisibilityId === s.id}
                 additionalActions={
                   <>
-                    <button
-                      type="button"
-                      className={`flex h-9 w-9 items-center justify-center rounded-full border px-0 text-sm transition ${
-                        activeSongId === s.id
-                          ? "border-pink-400 bg-pink-500/20 text-pink-200"
-                          : "border-white/20 bg-black/40 text-gray-200 hover:border-pink-400 hover:text-pink-200"
-                      }`}
-                      onClick={() => openFavoritePicker(s.id)}
-                      aria-label="Add to playlist"
-                    >
-                      <span className="text-base leading-none">+</span>
-                    </button>
-                    <button
-                      className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={deletingId === s.id}
-                      onClick={async () => {
-                        setErr(null);
-                        const ok = window.confirm(`Delete "${s.title}"? This can't be undone.`);
-                        if (!ok) return;
-                        try {
-                          setDeletingId(s.id);
-                          await api.deleteSong(s.id);
-                          setSongs((prev) => prev.filter((x) => x.id !== s.id));
-                        } catch (e: any) {
-                          setErr(e?.message || "Failed to delete song");
-                        } finally {
-                          setDeletingId(null);
-                        }
-                      }}
-                    >
-                      {deletingId === s.id ? "Deleting…" : "Delete"}
-                    </button>
+                  <button
+                    type="button"
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border px-0 text-sm transition ${
+                      activeSongId === s.id
+                        ? "border-pink-400 bg-pink-500/20 text-pink-200"
+                        : "border-white/20 bg-black/40 text-gray-200 hover:border-pink-400 hover:text-pink-200"
+                    }`}
+                    onClick={() => openFavoritePicker(s.id)}
+                    aria-label="Add to playlist"
+                  >
+                    <span className="text-base leading-none">+</span>
+                  </button>
+                  <button
+                    className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={deletingId === s.id}
+                    onClick={async () => {
+                      setErr(null);
+                      const ok = window.confirm(`Delete "${s.title}"? This can't be undone.`);
+                      if (!ok) return;
+                      try {
+                        setDeletingId(s.id);
+                        await api.deleteSong(s.id);
+                        setSongs((prev) => prev.filter((x) => x.id !== s.id));
+                      } catch (e: any) {
+                        setErr(e?.message || "Failed to delete song");
+                      } finally {
+                        setDeletingId(null);
+                      }
+                    }}
+                  >
+                    {deletingId === s.id ? "Deleting…" : "Delete"}
+                  </button>
                   </>
                 }
                 footer={
                   activeSongId === s.id ? (
-                    <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                      {playlistsLoading ? (
-                        <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                      ) : playlists && playlists.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                            Add to playlist:
-                          </span>
-                          {playlists.map((pl) => (
-                            <button
-                              key={pl.id}
-                              type="button"
-                              className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                              disabled={addingToId === pl.id}
-                              onClick={() => handleAddToPlaylist(pl.id, s.id)}
-                            >
-                              {addingToId === pl.id ? "Adding…" : pl.name}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span>You don&apos;t have any playlists yet.</span>
-                          <Link
-                            to="/playlists"
-                            className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
-                          >
-                            Create a playlist
-                          </Link>
-                        </div>
-                      )}
+                <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
+                  {playlistsLoading ? (
+                    <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
+                  ) : playlists && playlists.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
+                        Add to playlist:
+                      </span>
+                      {playlists.map((pl) => (
+                        <button
+                          key={pl.id}
+                          type="button"
+                          className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={addingToId === pl.id}
+                          onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                        >
+                          {addingToId === pl.id ? "Adding…" : pl.name}
+                        </button>
+                      ))}
                     </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>You don&apos;t have any playlists yet.</span>
+                      <Link
+                        to="/playlists"
+                        className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                      >
+                        Create a playlist
+                      </Link>
+                    </div>
+                  )}
+                </div>
                   ) : null
                 }
               />

@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { ReactNode } from "react";
+import { Play, Pause } from "lucide-react";
 import { resolveMediaUrl } from "../../lib/media";
+import { playerStore } from "../../stores/playerStore";
 
 type BaseSong = {
   id: string;
@@ -72,8 +74,8 @@ export default function SongCard({
 
   const containerClasses =
     variant === "card"
-      ? `space-y-2 rounded-lg border p-3 ${playingClasses}`
-      : `flex items-center justify-between py-2 px-2 rounded-md ${playingClasses}`;
+      ? `group space-y-2 rounded-lg border p-3 ${playingClasses}`
+      : `group flex items-center justify-between py-2 px-2 rounded-md ${playingClasses}`;
 
   const titleElement = useLink ? (
     <Link
@@ -104,12 +106,41 @@ export default function SongCard({
       {variant === "card" ? (
         <div className="flex items-center justify-between gap-3">
           {coverImageSrc && (
-            <div className="flex-shrink-0">
-              <img
-                src={coverImageSrc}
-                alt={`Cover for ${song.title || "Untitled"}`}
-                className="h-16 w-16 rounded-md object-cover"
-              />
+            <div className="relative flex-shrink-0">
+              {onPlay && song.audio_url ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isPlaying) {
+                      playerStore.pause();
+                    } else {
+                      onPlay();
+                    }
+                  }}
+                  className="relative h-16 w-16 rounded-md overflow-hidden transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 focus:ring-offset-black"
+                >
+                  <img
+                    src={coverImageSrc}
+                    alt={`Cover for ${song.title || "Untitled"}`}
+                    className="h-16 w-16 rounded-md object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
+                      {isPlaying ? (
+                        <Pause className="h-5 w-5 text-white fill-white" />
+                      ) : (
+                        <Play className="h-5 w-5 text-white fill-white" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <img
+                  src={coverImageSrc}
+                  alt={`Cover for ${song.title || "Untitled"}`}
+                  className="h-16 w-16 rounded-md object-cover"
+                />
+              )}
             </div>
           )}
           <div className="min-w-0 flex-1">
@@ -151,9 +182,15 @@ export default function SongCard({
                     className={`rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white ${
                       variant === "card" ? "hover:border-pink-400 hover:text-pink-200" : "hover:border-emerald-400 hover:text-emerald-200"
                     }`}
-                    onClick={onPlay}
+                    onClick={() => {
+                      if (isPlaying) {
+                        playerStore.pause();
+                      } else {
+                        onPlay?.();
+                      }
+                    }}
                   >
-                    {playButtonText || (isPlaying ? "Playing" : "Play")}
+                    {playButtonText || (isPlaying ? "Pause" : "Play")}
                   </button>
                 ) : (
                   <div className="text-xs text-gray-500">No audio</div>
@@ -212,9 +249,15 @@ export default function SongCard({
                   <button
                     type="button"
                     className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white hover:border-pink-400 hover:text-pink-200"
-                    onClick={onPlay}
+                    onClick={() => {
+                      if (isPlaying) {
+                        playerStore.pause();
+                      } else {
+                        onPlay?.();
+                      }
+                    }}
                   >
-                    {playButtonText || (isPlaying ? "Playing" : "Play")}
+                    {playButtonText || (isPlaying ? "Pause" : "Play")}
                   </button>
                 ) : (
                   <div className="text-xs text-gray-500">No audio</div>

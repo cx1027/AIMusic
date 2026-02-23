@@ -254,14 +254,14 @@ export default function PlaylistsPage() {
                   <p className="text-gray-300">No songs in this playlist yet.</p>
                 )}
                 {selected.songs.length > 0 && (
-                  <ul className="divide-y divide-white/5">
+                  <div className="grid gap-3">
                     {selected.songs.map((s) => {
                       const isPlaying = currentPlayingId === s.id;
                       return (
                         <SongCard
-                          key={s.id}
+                          key={s.id} 
                           song={s}
-                          variant="list"
+                          variant="card"
                           isPlaying={isPlaying}
                           showPlayButton={true}
                           showDate={true}
@@ -281,7 +281,7 @@ export default function PlaylistsPage() {
                         />
                       );
                     })}
-                  </ul>
+                  </div>
                 )}
               </div>
             </>
