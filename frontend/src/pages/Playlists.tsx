@@ -16,6 +16,7 @@ export default function PlaylistsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [removingSongId, setRemovingSongId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
 
   const loadPlaylists = () => {
@@ -103,6 +104,35 @@ export default function PlaylistsPage() {
       })
       .catch((e: any) => setErr(e?.message || "Failed to remove song from playlist"))
       .finally(() => setRemovingSongId(null));
+  };
+
+  const handleToggleLike = async (songId: string) => {
+    if (!selected) return;
+    setErr(null);
+    try {
+      setLikingId(songId);
+      const result = await api.toggleLikeSong(songId);
+      setSelected((prev) =>
+        prev
+          ? {
+              ...prev,
+              songs: prev.songs.map((s) =>
+                s.id === songId
+                  ? {
+                      ...s,
+                      liked_by_me: result.liked,
+                      like_count: result.like_count
+                    }
+                  : s
+              )
+            }
+          : prev
+      );
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update like");
+    } finally {
+      setLikingId(null);
+    }
   };
 
   const buildQueueFromSelected = (startSongId?: string) => {
@@ -264,10 +294,13 @@ export default function PlaylistsPage() {
                           variant="card"
                           isPlaying={isPlaying}
                           showPlayButton={true}
+                          showLikeButton={true}
                           showDate={true}
                           playButtonText={isPlaying ? "Playing" : "Play from here"}
                           onPlay={() => handlePlayFromSong(s.id)}
+                          onLike={() => handleToggleLike(s.id)}
                           onSelect={() => setSelectedSongId(s.id)}
+                          isLoading={likingId === s.id}
                           additionalActions={
                             <button
                               type="button"

@@ -21,6 +21,8 @@ export type PlaylistWithSongs = Playlist & {
     title: string;
     audio_url?: string | null;
     created_at: string;
+    like_count?: number;
+    liked_by_me?: boolean;
   }[];
 };
 
