@@ -46,12 +46,13 @@ export function DiscoverSongCard({
   footer,
 }: DiscoverSongCardProps) {
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [shareMenuPosition, setShareMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/songs/${encodeURIComponent(song.id)}` : "";
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
 
   return (
-    <div className="group flex w-full flex-col overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
+    <div className="group flex w-full flex-col rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
       <div
         role="button"
         tabIndex={0}
@@ -192,14 +193,32 @@ export function DiscoverSongCard({
             }`}
             onClick={(e) => {
               e.stopPropagation();
-              setIsShareMenuOpen((open) => !open);
+              setIsShareMenuOpen((open) => {
+                const next = !open;
+                if (next) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const verticalOffset = 8;
+                  const horizontalOffset = 0;
+                  const popupWidth = 208; // ~ w-52
+                  const top = rect.bottom + verticalOffset;
+                  const maxLeft = window.innerWidth - popupWidth - 8;
+                  const left = Math.min(rect.left + horizontalOffset, maxLeft);
+                  setShareMenuPosition({ top, left });
+                } else {
+                  setShareMenuPosition(null);
+                }
+                return next;
+              });
             }}
           >
             <Share2 className="h-3 w-3" aria-hidden="true" />
             <span className="sr-only">Share</span>
           </button>
-          {isShareMenuOpen && (
-            <div className="absolute right-0 top-8 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">
+          {isShareMenuOpen && shareMenuPosition && (
+            <div
+              className="fixed z-50 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg"
+              style={{ top: shareMenuPosition.top, left: shareMenuPosition.left }}
+            >
               <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                 Share track
               </div>
