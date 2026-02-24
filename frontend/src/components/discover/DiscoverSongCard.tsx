@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Heart, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../../lib/media";
 import { playerStore } from "../../stores/playerStore";
@@ -137,17 +137,17 @@ export function DiscoverSongCard({
             <button
               type="button"
               onClick={() => onPlay?.()}
-              className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-medium text-white hover:border-emerald-400 hover:text-emerald-200"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-[11px] font-medium text-white hover:border-emerald-400 hover:text-emerald-200"
             >
               {isPlaying ? (
                 <>
-                  <Pause className="h-3 w-3" />
-                  <span>Pause</span>
+                  <Pause className="h-3 w-3" aria-hidden="true" />
+                  <span className="sr-only">Pause</span>
                 </>
               ) : (
                 <>
-                  <Play className="h-3 w-3 translate-x-[1px]" />
-                  <span>Play</span>
+                  <Play className="h-3 w-3 translate-x-[1px]" aria-hidden="true" />
+                  <span className="sr-only">Play</span>
                 </>
               )}
             </button>
@@ -161,20 +161,36 @@ export function DiscoverSongCard({
             disabled={isLiking}
             className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2 py-1 text-[11px] text-gray-200 hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLiking ? "…" : song.liked_by_me ? "❤️" : "🤍"} {song.like_count}
+            {isLiking ? (
+              <>
+                <Heart className="h-3 w-3 text-pink-300 animate-pulse" aria-hidden="true" />
+                <span className="sr-only">Liking…</span>
+              </>
+            ) : (
+              <>
+                <Heart
+                  className={`h-3 w-3 ${
+                    song.liked_by_me ? "fill-pink-500 text-pink-500" : "text-gray-300"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>{song.like_count}</span>
+              </>
+            )}
           </button>
 
           {additionalActions}
 
           <button
             type="button"
-            className="ml-auto rounded-md border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] text-gray-200 hover:border-blue-400 hover:text-blue-200"
+            className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[11px] text-gray-200 hover:border-blue-400 hover:text-blue-200"
             onClick={(e) => {
               e.stopPropagation();
               setIsShareMenuOpen((open) => !open);
             }}
           >
-            Share
+            <Share2 className="h-3 w-3" aria-hidden="true" />
+            <span className="sr-only">Share</span>
           </button>
           {isShareMenuOpen && (
             <div className="absolute right-0 top-8 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">

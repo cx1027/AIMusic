@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ReactNode, useState } from "react";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Heart, Share2 } from "lucide-react";
 import { resolveMediaUrl } from "../../lib/media";
 import { playerStore } from "../../stores/playerStore";
 
@@ -182,9 +182,7 @@ export default function SongCard({
                 {song.audio_url ? (
                   <button
                     type="button"
-                    className={`rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs text-white ${
-                      variant === "card" ? "hover:border-pink-400 hover:text-pink-200" : "hover:border-emerald-400 hover:text-emerald-200"
-                    }`}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-[11px] font-medium text-white hover:border-emerald-400 hover:text-emerald-200"
                     onClick={() => {
                       if (isPlaying) {
                         playerStore.pause();
@@ -193,10 +191,20 @@ export default function SongCard({
                       }
                     }}
                   >
-                    {playButtonText || (isPlaying ? "Pause" : "Play")}
+                    {isPlaying ? (
+                      <>
+                        <Pause className="h-3 w-3" aria-hidden="true" />
+                        <span className="sr-only">Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3 w-3 translate-x-[1px]" aria-hidden="true" />
+                        <span className="sr-only">Play</span>
+                      </>
+                    )}
                   </button>
                 ) : (
-                  <div className="text-xs text-gray-500">No audio</div>
+                  <div className="text-[11px] text-gray-500">No audio</div>
                 )}
               </>
             )}
@@ -205,13 +213,24 @@ export default function SongCard({
                 type="button"
                 disabled={isLoading}
                 onClick={onLike}
-                className={`rounded-md border px-3 py-2 text-xs transition ${
-                  song.liked_by_me
-                    ? "border-pink-400/60 bg-pink-500/10 text-pink-200 hover:bg-pink-500/20"
-                    : "border-white/20 bg-black/40 text-gray-200 hover:border-pink-400 hover:text-pink-200"
-                }`}
+                className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2 py-1 text-[11px] text-gray-200 hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoading ? "..." : song.liked_by_me ? "❤️" : "🤍"} {song.like_count ?? 0}
+                {isLoading ? (
+                  <>
+                    <Heart className="h-3 w-3 text-pink-300 animate-pulse" aria-hidden="true" />
+                    <span className="sr-only">Liking…</span>
+                  </>
+                ) : (
+                  <>
+                    <Heart
+                      className={`h-3 w-3 ${
+                        song.liked_by_me ? "fill-pink-500 text-pink-500" : "text-gray-300"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span>{song.like_count ?? 0}</span>
+                  </>
+                )}
               </button>
             )}
             {showVisibilityToggle && (
@@ -235,13 +254,14 @@ export default function SongCard({
             {additionalActions}
             <button
               type="button"
-              className="rounded-md border border-white/20 bg-black/40 px-3 py-2 text-xs text-gray-200 hover:border-blue-400 hover:text-blue-200"
+              className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[11px] text-gray-200 hover:border-blue-400 hover:text-blue-200"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsShareMenuOpen((open) => !open);
               }}
             >
-              Share
+              <Share2 className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">Share</span>
             </button>
             {isShareMenuOpen && (
               <div className="absolute right-0 top-9 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">
