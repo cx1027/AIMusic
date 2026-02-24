@@ -205,11 +205,11 @@ export default function PlaylistsPage() {
                 onChange={(e) => setNewDesc(e.target.value)}
               />
               <button
-                className="mt-1 inline-flex w-full items-center justify-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-white px-3 py-1.5 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleCreate}
                 disabled={creating || !newName.trim()}
               >
-                {creating ? "Creating..." : "Create"}
+                {creating ? "Creating..." : "Create playlist"}
               </button>
             </div>
           </div>
@@ -239,13 +239,24 @@ export default function PlaylistsPage() {
                   </div>
                   <button
                     type="button"
-                    className="ml-2 rounded bg-red-500/80 px-1.5 py-0.5 text-xs text-white hover:bg-red-500"
+                    className="ml-2 flex h-7 w-7 items-center justify-center rounded-full text-sm text-red-300 transition hover:bg-red-500/20 hover:text-red-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(pl.id);
                     }}
+                    aria-label="Delete playlist"
                   >
-                    Delete
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M9 3h6a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-2 2v10h8V8H8Zm2 2h2v6h-2v-6Zm4 0h2v6h-2v-6Z"
+                        fill="#FFFFFF"
+                      />
+                    </svg>
                   </button>
                 </div>
               ))}
@@ -270,7 +281,7 @@ export default function PlaylistsPage() {
                 <div className="flex items-center">
                   <button
                     type="button"
-                    className="rounded-md border border-green-400/60 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-100 hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center rounded-full border border-green-400/60 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-100 hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handlePlayPlaylist}
                     disabled={selected.songs.length === 0 || !selected.songs.some((s) => !!s.audio_url)}
                   >
@@ -304,11 +315,26 @@ export default function PlaylistsPage() {
                           additionalActions={
                             <button
                               type="button"
-                              className="rounded-md border border-red-500/60 bg-red-500/10 px-2 py-1 text-xs text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-red-300 transition hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                               disabled={removingSongId === s.id}
                               onClick={() => handleRemoveSong(selected.id, s.id)}
+                              aria-label={removingSongId === s.id ? "Removing…" : "Remove from playlist"}
                             >
-                              {removingSongId === s.id ? "Removing…" : "Remove"}
+                              {removingSongId === s.id ? (
+                                <span className="text-[10px]">…</span>
+                              ) : (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="M9 3h6a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-2 2v10h8V8H8Zm2 2h2v6h-2v-6Zm4 0h2v6h-2v-6Z"
+                                    fill="#FFFFFF"
+                                  />
+                                </svg>
+                              )}
                             </button>
                           }
                         />
