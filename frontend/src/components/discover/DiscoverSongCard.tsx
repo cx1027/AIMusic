@@ -50,7 +50,7 @@ export function DiscoverSongCard({
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
 
   return (
-    <div className="group flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:border-white/30 hover:from-white/10 hover:shadow-lg transition">
+    <div className="group flex w-full flex-col overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
       <button
         type="button"
         onClick={onSelect}
