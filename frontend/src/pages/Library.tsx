@@ -240,10 +240,10 @@ export default function Library() {
                   <>
                   <button
                     type="button"
-                    className={`flex h-9 w-9 items-center justify-center rounded-full border px-0 text-sm transition ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
                       activeSongId === s.id
-                        ? "border-pink-400 bg-pink-500/20 text-pink-200"
-                        : "border-white/20 bg-black/40 text-gray-200 hover:border-pink-400 hover:text-pink-200"
+                        ? "bg-white/20 text-white"
+                        : "bg-transparent text-gray-300 hover:bg-white/10"
                     }`}
                     onClick={() => openFavoritePicker(s.id)}
                     aria-label="Add to playlist"
@@ -251,7 +251,8 @@ export default function Library() {
                     <span className="text-base leading-none">+</span>
                   </button>
                   <button
-                    className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-red-300 transition hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={deletingId === s.id}
                     onClick={async () => {
                       setErr(null);
@@ -267,8 +268,23 @@ export default function Library() {
                         setDeletingId(null);
                       }
                     }}
+                    aria-label={deletingId === s.id ? "Deleting…" : "Delete song"}
                   >
-                    {deletingId === s.id ? "Deleting…" : "Delete"}
+                    {deletingId === s.id ? (
+                      <span className="text-[10px]">…</span>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M9 3h6a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-2 2v10h8V8H8Zm2 2h2v6h-2v-6Zm4 0h2v6h-2v-6Z"
+                          fill="#FFFFFF"
+                        />
+                      </svg>
+                    )}
                   </button>
                   </>
                 }
