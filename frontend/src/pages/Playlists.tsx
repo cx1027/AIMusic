@@ -279,14 +279,40 @@ export default function PlaylistsPage() {
                   </p>
                 </div>
                 <div className="flex items-center">
+                  {/*
+                    Consider the playlist "active" if the current playing song
+                    belongs to this playlist. This controls the icon color.
+                  */}
+                  {(() => {
+                    const isPlaylistActive =
+                      !!currentPlayingId && selected.songs.some((s) => s.id === currentPlayingId);
+                    return (
                   <button
                     type="button"
-                    className="inline-flex items-center rounded-full border border-green-400/60 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-100 hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        className={`group inline-flex h-10 w-10 items-center justify-center rounded-full text-xs font-medium text-green-100 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          isPlaylistActive
+                            ? "bg-white/5 hover:bg-white/10"
+                            : "bg-white/10 hover:bg-white/20"
+                        }`}
                     onClick={handlePlayPlaylist}
                     disabled={selected.songs.length === 0 || !selected.songs.some((s) => !!s.audio_url)}
                   >
-                    Play playlist
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          className={
+                            isPlaylistActive
+                              ? "h-5 w-5 fill-gray-300 transition group-hover:fill-white"
+                              : "h-5 w-5 fill-white"
+                          }
+                          aria-hidden="true"
+                        >
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                        <span className="sr-only">Play playlist</span>
                   </button>
+                    );
+                  })()}
                 </div>
               </div>
 
