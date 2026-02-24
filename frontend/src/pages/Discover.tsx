@@ -73,6 +73,8 @@ export default function Discover() {
       | undefined
     >
   >({});
+  const [showAllPopularSongs, setShowAllPopularSongs] = useState(false);
+  const [showAllPopularArtists, setShowAllPopularArtists] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -316,8 +318,109 @@ export default function Discover() {
                     {genre ? ` in ${genre}` : " · trending"}
                   </span>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {popularSongs.map((s) => {
+                {!showAllPopularSongs ? (
+                  <div className="flex gap-4 overflow-x-auto pb-1">
+                    {popularSongs.slice(0, 7).map((s) => {
+                      const state = optimistic[s.id] ?? {
+                        like_count: s.like_count,
+                        liked_by_me: s.liked_by_me,
+                      };
+                      const isLoading = loadingIds.has(s.id);
+                      const isPlaying = currentPlayingId === s.id;
+                      const inferredGenres = inferGenresFromPrompt(s.prompt);
+                      const displayGenre =
+                        inferredGenres.length > 1
+                          ? inferredGenres.join(" / ")
+                          : s.genre ?? inferredGenres[0] ?? null;
+
+                      const songWithOptimisticLikes: DiscoverSong = {
+                        ...s,
+                        like_count: state.like_count,
+                        liked_by_me: state.liked_by_me,
+                      };
+
+                      return (
+                        <div key={s.id} className="w-[220px] flex-shrink-0">
+                          <DiscoverSongCard
+                            song={songWithOptimisticLikes}
+                            displayGenre={displayGenre}
+                            isPlaying={isPlaying}
+                            onPlay={() => handlePlaySong(s)}
+                            onLike={() => handleLike(s)}
+                            onSelect={() => setSelectedSongId(s.id)}
+                            isLiking={isLoading}
+                            additionalActions={
+                              <>
+                                <button
+                                  type="button"
+                                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] transition ${
+                                    activeSongId === s.id
+                                      ? "border-blue-400 bg-blue-500/20 text-blue-200"
+                                      : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void openPlaylistPicker(s.id);
+                                  }}
+                                  aria-label="Add to playlist"
+                                >
+                                  +
+                                </button>
+                              </>
+                            }
+                            footer={
+                              activeSongId === s.id ? (
+                                <div className="mt-2 rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
+                                  {playlistsLoading ? (
+                                    <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
+                                  ) : playlists && playlists.length > 0 ? (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
+                                        Add to playlist:
+                                      </span>
+                                      {playlists.map((pl) => (
+                                        <button
+                                          key={pl.id}
+                                          type="button"
+                                          className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
+                                          disabled={addingToId === pl.id}
+                                          onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                                        >
+                                          {addingToId === pl.id ? "Adding…" : pl.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span>You don&apos;t have any playlists yet.</span>
+                                      <Link
+                                        to="/playlists"
+                                        className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                                      >
+                                        Create a playlist
+                                      </Link>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                    {popularSongs.length > 7 && (
+                      <button
+                        type="button"
+                        className="flex h-full min-h-[260px] w-[220px] flex-shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/40 text-xs font-medium text-gray-300 hover:border-white/40 hover:text-white"
+                        onClick={() => setShowAllPopularSongs(true)}
+                      >
+                        Show all
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                    {popularSongs.map((s) => {
                     const state = optimistic[s.id] ?? {
                       like_count: s.like_count,
                       liked_by_me: s.liked_by_me,
@@ -404,31 +507,57 @@ export default function Discover() {
                       />
                     );
                   })}
-                </div>
+                  </div>
+                )}
               </section>
 
               {/* Popular Artists */}
               {popularArtistsStats.length > 0 && (
                 <section className="mt-8">
-                  <div className="mb-3 flex items-center justify_between gap-2">
+                  <div className="mb-3 flex items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold text-white">Popular Artists</h2>
                     <span className="text-[11px] text-gray-400">
                       Based on the most liked tracks{genre ? ` in ${genre}` : ""}
                     </span>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-1">
-                    {popularArtistsStats.slice(0, 10).map((artist) => {
-                      const profile = artistProfiles[artist.username];
-                      return (
-                        <PopularArtistCard
-                          key={artist.username}
-                          username={artist.username}
-                          avatar_url={profile?.avatar_url}
-                          background_url={profile?.background_url}
-                        />
-                      );
-                    })}
-                  </div>
+                  {!showAllPopularArtists ? (
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {popularArtistsStats.slice(0, 7).map((artist) => {
+                        const profile = artistProfiles[artist.username];
+                        return (
+                          <PopularArtistCard
+                            key={artist.username}
+                            username={artist.username}
+                            avatar_url={profile?.avatar_url}
+                            background_url={profile?.background_url}
+                          />
+                        );
+                      })}
+                      {popularArtistsStats.length > 7 && (
+                        <button
+                          type="button"
+                          className="flex h-[180px] w-[160px] flex-shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/40 text-xs font-medium text-gray-300 hover:border-white/40 hover:text-white"
+                          onClick={() => setShowAllPopularArtists(true)}
+                        >
+                          Show all
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                      {popularArtistsStats.map((artist) => {
+                        const profile = artistProfiles[artist.username];
+                        return (
+                          <PopularArtistCard
+                            key={artist.username}
+                            username={artist.username}
+                            avatar_url={profile?.avatar_url}
+                            background_url={profile?.background_url}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </section>
               )}
             </>
