@@ -61,6 +61,7 @@ export default function Discover() {
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+  const [popularPage, setPopularPage] = useState(1);
   const [artistProfiles, setArtistProfiles] = useState<
     Record<
       string,
@@ -84,6 +85,12 @@ export default function Discover() {
       .then(setData)
       .catch((e: any) => setError(e?.message || "Failed to load discover feed"))
       .finally(() => setLoading(false));
+  }, [genre]);
+
+  // Reset popular songs pagination and layout when genre changes
+  useEffect(() => {
+    setShowAllPopularSongs(false);
+    setPopularPage(1);
   }, [genre]);
 
   // Subscribe to player store to track currently playing song
@@ -113,6 +120,14 @@ export default function Discover() {
     // Default to trending when no genre filter
     return data.trending;
   })();
+
+  const popularSongsPerPage = 25; // 5 rows * 5 songs per row
+  const popularTotalPages = Math.max(1, Math.ceil(popularSongs.length / popularSongsPerPage));
+  const currentPopularPage = Math.min(popularPage, popularTotalPages);
+  const pagedPopularSongs = popularSongs.slice(
+    (currentPopularPage - 1) * popularSongsPerPage,
+    currentPopularPage * popularSongsPerPage
+  );
 
   const popularArtistsStats = (() => {
     const stats = new Map<
@@ -313,10 +328,17 @@ export default function Discover() {
               <section className="mt-5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold text-white">Popular Songs</h2>
-                  <span className="text-[11px] text-gray-400">
-                    Showing {popularSongs.length} track{popularSongs.length === 1 ? "" : "s"}
-                    {genre ? ` in ${genre}` : " · trending"}
-                  </span>
+                  <button
+                    type="button"
+                    className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      setShowAllPopularSongs(true);
+                      setPopularPage(1);
+                    }}
+                    disabled={!popularSongs.length}
+                  >
+                    Show All
+                  </button>
                 </div>
                 {!showAllPopularSongs ? (
                   <div className="flex gap-4 overflow-x-auto pb-1">
@@ -411,19 +433,11 @@ export default function Discover() {
                         </div>
                       );
                     })}
-                    {popularSongs.length > 7 && (
-                      <button
-                        type="button"
-                        className="flex h-full min-h-[260px] w-[220px] flex-shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/40 text-xs font-medium text-gray-300 hover:border-white/40 hover:text-white"
-                        onClick={() => setShowAllPopularSongs(true)}
-                      >
-                        Show all
-                      </button>
-                    )}
                   </div>
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                    {popularSongs.map((s) => {
+                  <>
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+                    {pagedPopularSongs.map((s) => {
                     const state = optimistic[s.id] ?? {
                       like_count: s.like_count,
                       liked_by_me: s.liked_by_me,
@@ -514,6 +528,30 @@ export default function Discover() {
                     );
                   })}
                   </div>
+                  {popularTotalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-center gap-3 text-[11px] text-gray-300">
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/20 px-2 py-0.5 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => setPopularPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPopularPage === 1}
+                      >
+                        Prev
+                      </button>
+                      <span>
+                        Page {currentPopularPage} of {popularTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/20 px-2 py-0.5 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => setPopularPage((p) => Math.min(popularTotalPages, p + 1))}
+                        disabled={currentPopularPage === popularTotalPages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                  </>
                 )}
               </section>
 

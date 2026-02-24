@@ -10,7 +10,9 @@ type SongRow = {
   id: string;
   title: string;
   audio_url?: string | null;
+  cover_image_url?: string | null;
   created_at: string;
+  genre?: string | null;
   is_public: boolean;
   like_count?: number;
   liked_by_me?: boolean;
@@ -226,9 +228,11 @@ export default function Library() {
                 song={s}
                 variant="card"
                 isPlaying={isPlaying}
+                coverShape="rect"
                 showPlayButton={true}
                 showLikeButton={true}
                 showVisibilityToggle={true}
+                showGenre={true}
                 showDate={true}
                 onPlay={() => handlePlaySong(s)}
                 onLike={() => handleToggleLike(s)}

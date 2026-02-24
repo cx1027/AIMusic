@@ -21,6 +21,7 @@ type SongCardProps = {
     liked_by_me?: boolean;
   };
   variant?: "card" | "list";
+  coverShape?: "square" | "rect";
   isPlaying?: boolean;
   showPlayButton?: boolean;
   showLikeButton?: boolean;
@@ -44,6 +45,7 @@ type SongCardProps = {
 export default function SongCard({
   song,
   variant = "card",
+  coverShape = "square",
   isPlaying = false,
   showPlayButton = true,
   showLikeButton = false,
@@ -67,6 +69,7 @@ export default function SongCard({
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/songs/${encodeURIComponent(song.id)}` : "";
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
+  const coverSizeClasses = coverShape === "rect" ? "h-24 w-16" : "h-16 w-16";
   const playingClasses = isPlaying
     ? variant === "card"
       ? "border-pink-400/60 bg-pink-500/10"
@@ -120,12 +123,12 @@ export default function SongCard({
                       onPlay();
                     }
                   }}
-                  className="relative h-16 w-16 rounded-md overflow-hidden transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 focus:ring-offset-black"
+                  className={`relative ${coverSizeClasses} rounded-md overflow-hidden transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 focus:ring-offset-black`}
                 >
                   <img
                     src={coverImageSrc}
                     alt={`Cover for ${song.title || "Untitled"}`}
-                    className="h-16 w-16 rounded-md object-cover"
+                    className={`${coverSizeClasses} rounded-md object-cover`}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
@@ -141,13 +144,18 @@ export default function SongCard({
                 <img
                   src={coverImageSrc}
                   alt={`Cover for ${song.title || "Untitled"}`}
-                  className="h-16 w-16 rounded-md object-cover"
+                  className={`${coverSizeClasses} rounded-md object-cover`}
                 />
               )}
             </div>
           )}
           <div className="min-w-0 flex-1">
             {titleElement}
+            {showGenre ? (
+              <div className="mt-1 text-xs text-gray-400">
+                {song.genre ? <span className="uppercase">{song.genre}</span> : "No genre"}
+              </div>
+            ) : null}
             {showUsername && song.username && (
               <div className="mt-1 text-xs text-gray-400">
                 by{" "}
@@ -158,12 +166,6 @@ export default function SongCard({
                 >
                   @{song.username}
                 </Link>
-                {showGenre && (
-                  <>
-                    {" "}
-                    · {song.genre ? <span className="uppercase">{song.genre}</span> : "No genre"}
-                  </>
-                )}
               </div>
             )}
             {showDate && (
@@ -351,6 +353,11 @@ export default function SongCard({
         <>
           <div className="flex-1 min-w-0">
             {titleElement}
+            {showGenre ? (
+              <div className="mt-1 text-xs text-gray-400">
+                {song.genre ? <span className="uppercase">{song.genre}</span> : "No genre"}
+              </div>
+            ) : null}
             {showDate && (
               <div className="text-xs text-gray-400">
                 Added: {new Date(song.created_at).toLocaleString()}
