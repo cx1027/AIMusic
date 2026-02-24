@@ -61,7 +61,6 @@ export default function Discover() {
   const [addingToId, setAddingToId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
-  const [popularPage, setPopularPage] = useState(1);
   const [artistProfiles, setArtistProfiles] = useState<
     Record<
       string,
@@ -76,6 +75,8 @@ export default function Discover() {
   >({});
   const [showAllPopularSongs, setShowAllPopularSongs] = useState(false);
   const [showAllPopularArtists, setShowAllPopularArtists] = useState(false);
+  const [popularPage, setPopularPage] = useState(1);
+  const [popularArtistsPage, setPopularArtistsPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
@@ -91,6 +92,8 @@ export default function Discover() {
   useEffect(() => {
     setShowAllPopularSongs(false);
     setPopularPage(1);
+    setShowAllPopularArtists(false);
+    setPopularArtistsPage(1);
   }, [genre]);
 
   // Subscribe to player store to track currently playing song
@@ -121,14 +124,6 @@ export default function Discover() {
     return data.trending;
   })();
 
-  const popularSongsPerPage = 25; // 5 rows * 5 songs per row
-  const popularTotalPages = Math.max(1, Math.ceil(popularSongs.length / popularSongsPerPage));
-  const currentPopularPage = Math.min(popularPage, popularTotalPages);
-  const pagedPopularSongs = popularSongs.slice(
-    (currentPopularPage - 1) * popularSongsPerPage,
-    currentPopularPage * popularSongsPerPage
-  );
-
   const popularArtistsStats = (() => {
     const stats = new Map<
       string,
@@ -158,6 +153,25 @@ export default function Discover() {
 
     return Array.from(stats.values()).sort((a, b) => b.totalLikes - a.totalLikes);
   })();
+
+  const popularSongsPerPage = 25; // 5 rows * 5 songs per row
+  const popularTotalPages = Math.max(1, Math.ceil(popularSongs.length / popularSongsPerPage));
+  const currentPopularPage = Math.min(popularPage, popularTotalPages);
+  const pagedPopularSongs = popularSongs.slice(
+    (currentPopularPage - 1) * popularSongsPerPage,
+    currentPopularPage * popularSongsPerPage
+  );
+
+  const popularArtistsPerPage = 25; // 5 rows * 5 artists per row
+  const popularArtistsTotalPages = Math.max(
+    1,
+    Math.ceil(popularArtistsStats.length / popularArtistsPerPage)
+  );
+  const currentPopularArtistsPage = Math.min(popularArtistsPage, popularArtistsTotalPages);
+  const pagedPopularArtists = popularArtistsStats.slice(
+    (currentPopularArtistsPage - 1) * popularArtistsPerPage,
+    currentPopularArtistsPage * popularArtistsPerPage
+  );
 
   // Lazy-load basic artist profile data for the Popular Artists section
   useEffect(() => {
@@ -560,9 +574,17 @@ export default function Discover() {
                 <section className="mt-8">
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold text-white">Popular Artists</h2>
-                    <span className="text-[11px] text-gray-400">
-                      Based on the most liked tracks{genre ? ` in ${genre}` : ""}
-                    </span>
+                    <button
+                      type="button"
+                      className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200 underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => {
+                        setShowAllPopularArtists(true);
+                        setPopularArtistsPage(1);
+                      }}
+                      disabled={!popularArtistsStats.length}
+                    >
+                      Show All
+                    </button>
                   </div>
                   {!showAllPopularArtists ? (
                     <div className="flex gap-3 overflow-x-auto pb-1">
@@ -577,30 +599,52 @@ export default function Discover() {
                           />
                         );
                       })}
-                      {popularArtistsStats.length > 7 && (
-                        <button
-                          type="button"
-                          className="flex h-[180px] w-[160px] flex-shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/40 text-xs font-medium text-gray-300 hover:border-white/40 hover:text-white"
-                          onClick={() => setShowAllPopularArtists(true)}
-                        >
-                          Show all
-                        </button>
-                      )}
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-3">
-                      {popularArtistsStats.map((artist) => {
-                        const profile = artistProfiles[artist.username];
-                        return (
-                          <PopularArtistCard
-                            key={artist.username}
-                            username={artist.username}
-                            avatar_url={profile?.avatar_url}
-                            background_url={profile?.background_url}
-                          />
-                        );
-                      })}
-                    </div>
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+                        {pagedPopularArtists.map((artist) => {
+                          const profile = artistProfiles[artist.username];
+                          return (
+                            <PopularArtistCard
+                              key={artist.username}
+                              username={artist.username}
+                              avatar_url={profile?.avatar_url}
+                              background_url={profile?.background_url}
+                            />
+                          );
+                        })}
+                      </div>
+                      {popularArtistsTotalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-center gap-3 text-[11px] text-gray-300">
+                          <button
+                            type="button"
+                            className="rounded-full border border-white/20 px-2 py-0.5 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() =>
+                              setPopularArtistsPage((p) => Math.max(1, p - 1))
+                            }
+                            disabled={currentPopularArtistsPage === 1}
+                          >
+                            Prev
+                          </button>
+                          <span>
+                            Page {currentPopularArtistsPage} of {popularArtistsTotalPages}
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded-full border border-white/20 px-2 py-0.5 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() =>
+                              setPopularArtistsPage((p) =>
+                                Math.min(popularArtistsTotalPages, p + 1)
+                              )
+                            }
+                            disabled={currentPopularArtistsPage === popularArtistsTotalPages}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </section>
               )}
