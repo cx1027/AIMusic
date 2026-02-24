@@ -77,7 +77,7 @@ class AceStepHandler:
         self.reward_model = None
         
         # Batch size
-        self.batch_size = 2
+        self.batch_size = 1
         
         # Custom layers config
         self.custom_layers_config = {2: [6], 3: [10, 11], 4: [3], 5: [8, 9], 6: [8]}

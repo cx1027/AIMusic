@@ -5,12 +5,14 @@ import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 import SongDetailSidebar from "../components/song/SongDetailSidebar";
 import SongCard from "../components/song/SongCard";
+import { inferGenresFromPrompt } from "../lib/genres";
 
 type DiscoverSong = {
   id: string;
   user_id: string;
   username: string;
   title: string;
+  prompt: string;
   audio_url?: string | null;
   cover_image_url?: string | null;
   duration: number;
@@ -228,15 +230,19 @@ export default function Discover() {
               const state = optimistic[s.id] ?? { like_count: s.like_count, liked_by_me: s.liked_by_me };
               const isLoading = loadingIds.has(s.id);
               const isPlaying = currentPlayingId === s.id;
+              const inferredGenres = inferGenresFromPrompt(s.prompt);
+              const displayGenre =
+                inferredGenres.length > 1 ? inferredGenres.join(" / ") : s.genre ?? inferredGenres[0] ?? null;
 
               return (
                 <SongCard
                   key={s.id}
                   song={{
-                    ...s,
-                    like_count: state.like_count,
-                    liked_by_me: state.liked_by_me,
-                  }}
+                      ...s,
+                      genre: displayGenre,
+                      like_count: state.like_count,
+                      liked_by_me: state.liked_by_me,
+                    }}
                   variant="card"
                   isPlaying={isPlaying}
                   showPlayButton={true}

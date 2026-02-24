@@ -185,7 +185,10 @@ export const api = {
         user_id: string;
         username: string;
         title: string;
+        prompt: string;
+        lyrics?: string | null;
         audio_url?: string | null;
+        cover_image_url?: string | null;
         duration: number;
         genre?: string | null;
         bpm?: number | null;
@@ -200,7 +203,10 @@ export const api = {
         user_id: string;
         username: string;
         title: string;
+        prompt: string;
+        lyrics?: string | null;
         audio_url?: string | null;
+        cover_image_url?: string | null;
         duration: number;
         genre?: string | null;
         bpm?: number | null;
@@ -215,7 +221,10 @@ export const api = {
         user_id: string;
         username: string;
         title: string;
+        prompt: string;
+        lyrics?: string | null;
         audio_url?: string | null;
+        cover_image_url?: string | null;
         duration: number;
         genre?: string | null;
         bpm?: number | null;

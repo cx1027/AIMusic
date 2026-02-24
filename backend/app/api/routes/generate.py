@@ -58,7 +58,19 @@ def create_generation(
 
     genre = payload.get("genre")
     if genre is not None:
-        genre = str(genre).strip() or None
+        # Handle multiple genres: can be a list, comma-separated string, or single string
+        if isinstance(genre, list):
+            # If it's a list, join with comma
+            genre = ", ".join(str(g).strip() for g in genre if str(g).strip())
+            genre = genre if genre else None
+        else:
+            # If it's a string, check if it contains commas (multiple genres)
+            genre_str = str(genre).strip()
+            if genre_str:
+                # If it's already comma-separated, keep it; otherwise it's a single genre
+                genre = genre_str
+            else:
+                genre = None
 
     # Simple credits gate for MVP - each song costs 2 credits
     if user.credits_balance < 2:
