@@ -96,10 +96,14 @@ def discover_feed(
     # Optional genre section
     genre_rows: list[tuple[Song, User]] = []
     if genre:
+        # Allow filtering when songs have multiple genre tags stored as a
+        # comma-separated string (e.g. "Electronic, Ambient") by matching
+        # on the requested genre name as a substring.
+        like = f"%{genre}%"
         genre_stmt = (
             select(Song, User)
             .join(User, User.id == Song.user_id)
-            .where(Song.is_public.is_(True), Song.genre == genre)
+            .where(Song.is_public.is_(True), Song.genre.ilike(like))
             .order_by(desc(Song.created_at))
             .limit(limit)
         )
@@ -158,10 +162,11 @@ def by_genre(
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user_optional),
 ) -> list[dict]:
+    like = f"%{genre}%"
     stmt = (
         select(Song, User)
         .join(User, User.id == Song.user_id)
-        .where(Song.is_public.is_(True), Song.genre == genre)
+        .where(Song.is_public.is_(True), Song.genre.ilike(like))
         .order_by(desc(Song.created_at))
         .limit(limit)
     )

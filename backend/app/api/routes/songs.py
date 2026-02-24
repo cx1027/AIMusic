@@ -35,7 +35,11 @@ def list_songs(
         stmt = stmt.where(or_(Song.title.ilike(like), Song.prompt.ilike(like)))
 
     if genre:
-        stmt = stmt.where(Song.genre == genre)
+        # Support songs that have multiple genre tags stored as a comma-separated string
+        # (e.g. "Electronic, Ambient") while still allowing filtering by a single genre
+        # selected in the UI (e.g. "Electronic").
+        like = f"%{genre}%"
+        stmt = stmt.where(Song.genre.ilike(like))
 
     if order == "oldest":
         stmt = stmt.order_by(Song.created_at.asc())
