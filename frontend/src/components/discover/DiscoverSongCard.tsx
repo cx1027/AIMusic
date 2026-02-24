@@ -137,7 +137,9 @@ export function DiscoverSongCard({
             <button
               type="button"
               onClick={() => onPlay?.()}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-[11px] font-medium text-white hover:border-emerald-400 hover:text-emerald-200"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
+                isPlaying ? "bg-white/20 text-white" : "bg-transparent text-gray-300 hover:bg-white/10"
+              }`}
             >
               {isPlaying ? (
                 <>
@@ -159,18 +161,20 @@ export function DiscoverSongCard({
             type="button"
             onClick={onLike}
             disabled={isLiking}
-            className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2 py-1 text-[11px] text-gray-200 hover:border-pink-400 hover:text-pink-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              song.liked_by_me ? "bg-white/20 text-white" : "bg-transparent text-gray-300 hover:bg-white/10"
+            }`}
           >
             {isLiking ? (
               <>
-                <Heart className="h-3 w-3 text-pink-300 animate-pulse" aria-hidden="true" />
+                <Heart className="h-3 w-3 text-white fill-white animate-pulse" aria-hidden="true" />
                 <span className="sr-only">Liking…</span>
               </>
             ) : (
               <>
                 <Heart
                   className={`h-3 w-3 ${
-                    song.liked_by_me ? "fill-pink-500 text-pink-500" : "text-gray-300"
+                    song.liked_by_me ? "fill-white text-white" : "text-gray-300"
                   }`}
                   aria-hidden="true"
                 />
@@ -183,7 +187,9 @@ export function DiscoverSongCard({
 
           <button
             type="button"
-            className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[11px] text-gray-200 hover:border-blue-400 hover:text-blue-200"
+            className={`ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
+              isShareMenuOpen ? "bg-white/20 text-white" : "bg-transparent text-gray-300 hover:bg-white/10"
+            }`}
             onClick={(e) => {
               e.stopPropagation();
               setIsShareMenuOpen((open) => !open);

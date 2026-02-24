@@ -353,10 +353,10 @@ export default function Discover() {
                               <>
                                 <button
                                   type="button"
-                                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] transition ${
+                                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
                                     activeSongId === s.id
-                                      ? "border-blue-400 bg-blue-500/20 text-blue-200"
-                                      : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
+                                      ? "bg-blue-500/20 text-blue-200"
+                                      : "bg-transparent text-gray-300 hover:bg-white/10"
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -456,10 +456,10 @@ export default function Discover() {
                           <>
                             <button
                               type="button"
-                              className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] transition ${
+                              className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
                                 activeSongId === s.id
-                                  ? "border-blue-400 bg-blue-500/20 text-blue-200"
-                                  : "border-white/20 bg-black/40 text-gray-200 hover:border-blue-400 hover:text-blue-200"
+                                  ? "bg-blue-500/20 text-blue-200"
+                                  : "bg-transparent text-gray-300 hover:bg-white/10"
                               }`}
                               onClick={(e) => {
                                 e.stopPropagation();
