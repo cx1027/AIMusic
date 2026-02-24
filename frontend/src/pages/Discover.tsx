@@ -366,43 +366,46 @@ export default function Discover() {
                                 >
                                   +
                                 </button>
-                              </>
-                            }
-                            footer={
-                              activeSongId === s.id ? (
-                                <div className="mt-2 rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                                  {playlistsLoading ? (
-                                    <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                                  ) : playlists && playlists.length > 0 ? (
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                                        Add to playlist:
-                                      </span>
-                                      {playlists.map((pl) => (
-                                        <button
-                                          key={pl.id}
-                                          type="button"
-                                          className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                                          disabled={addingToId === pl.id}
-                                          onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                                {activeSongId === s.id && (
+                                  <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
+                                    <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                                      Add to playlist
+                                    </div>
+                                    {playlistsLoading ? (
+                                      <div className="px-2 py-1.5 text-gray-300">Loading playlists…</div>
+                                    ) : playlists && playlists.length > 0 ? (
+                                      <div className="flex flex-col gap-1.5">
+                                        {playlists.map((pl) => (
+                                          <button
+                                            key={pl.id}
+                                            type="button"
+                                            className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                            disabled={addingToId === pl.id}
+                                            onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                                          >
+                                            <span className="truncate">{pl.name}</span>
+                                            {addingToId === pl.id && (
+                                              <span className="ml-2 text-[10px] text-gray-300">Adding…</span>
+                                            )}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+                                        <span className="text-[11px] text-gray-300">
+                                          You don&apos;t have any playlists yet.
+                                        </span>
+                                        <Link
+                                          to="/playlists"
+                                          className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
                                         >
-                                          {addingToId === pl.id ? "Adding…" : pl.name}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span>You don&apos;t have any playlists yet.</span>
-                                      <Link
-                                        to="/playlists"
-                                        className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
-                                      >
-                                        Create a playlist
-                                      </Link>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : null
+                                          Create a playlist
+                                        </Link>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             }
                           />
                         </div>
@@ -466,43 +469,46 @@ export default function Discover() {
                             >
                               +
                             </button>
-                          </>
-                        }
-                        footer={
-                          activeSongId === s.id ? (
-                            <div className="mt-2 rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                              {playlistsLoading ? (
-                                <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                              ) : playlists && playlists.length > 0 ? (
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                                    Add to playlist:
-                                  </span>
-                                  {playlists.map((pl) => (
-                                    <button
-                                      key={pl.id}
-                                      type="button"
-                                      className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                                      disabled={addingToId === pl.id}
-                                      onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                            {activeSongId === s.id && (
+                              <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
+                                <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                                  Add to playlist
+                                </div>
+                                {playlistsLoading ? (
+                                  <div className="px-2 py-1.5 text-gray-300">Loading playlists…</div>
+                                ) : playlists && playlists.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    {playlists.map((pl) => (
+                                      <button
+                                        key={pl.id}
+                                        type="button"
+                                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                        disabled={addingToId === pl.id}
+                                        onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                                      >
+                                        <span className="truncate">{pl.name}</span>
+                                        {addingToId === pl.id && (
+                                          <span className="ml-2 text-[10px] text-gray-300">Adding…</span>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+                                    <span className="text-[11px] text-gray-300">
+                                      You don&apos;t have any playlists yet.
+                                    </span>
+                                    <Link
+                                      to="/playlists"
+                                      className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
                                     >
-                                      {addingToId === pl.id ? "Adding…" : pl.name}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span>You don&apos;t have any playlists yet.</span>
-                                  <Link
-                                    to="/playlists"
-                                    className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
-                                  >
-                                    Create a playlist
-                                  </Link>
-                                </div>
-                              )}
-                            </div>
-                          ) : null
+                                      Create a playlist
+                                    </Link>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
                         }
                       />
                     );

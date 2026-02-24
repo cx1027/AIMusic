@@ -238,91 +238,90 @@ export default function Library() {
                 isLoading={likingId === s.id}
                 additionalActions={
                   <>
-                  <button
-                    type="button"
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
-                      activeSongId === s.id
-                        ? "bg-white/20 text-white"
-                        : "bg-transparent text-gray-300 hover:bg-white/10"
-                    }`}
-                    onClick={() => openFavoritePicker(s.id)}
-                    aria-label="Add to playlist"
-                  >
-                    <span className="text-base leading-none">+</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-red-300 transition hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={deletingId === s.id}
-                    onClick={async () => {
-                      setErr(null);
-                      const ok = window.confirm(`Delete "${s.title}"? This can't be undone.`);
-                      if (!ok) return;
-                      try {
-                        setDeletingId(s.id);
-                        await api.deleteSong(s.id);
-                        setSongs((prev) => prev.filter((x) => x.id !== s.id));
-                      } catch (e: any) {
-                        setErr(e?.message || "Failed to delete song");
-                      } finally {
-                        setDeletingId(null);
-                      }
-                    }}
-                    aria-label={deletingId === s.id ? "Deleting…" : "Delete song"}
-                  >
-                    {deletingId === s.id ? (
-                      <span className="text-[10px]">…</span>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M9 3h6a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-2 2v10h8V8H8Zm2 2h2v6h-2v-6Zm4 0h2v6h-2v-6Z"
-                          fill="#FFFFFF"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                  </>
-                }
-                footer={
-                  activeSongId === s.id ? (
-                <div className="rounded-md border border-white/15 bg-black/60 p-2 text-xs text-gray-200">
-                  {playlistsLoading ? (
-                    <div className="px-1 py-0.5 text-gray-300">Loading playlists…</div>
-                  ) : playlists && playlists.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="mr-1 text-[11px] uppercase tracking-wide text-gray-400">
-                        Add to playlist:
-                      </span>
-                      {playlists.map((pl) => (
-                        <button
-                          key={pl.id}
-                          type="button"
-                          className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[11px] font-medium hover:border-white/50 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={addingToId === pl.id}
-                          onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                    <button
+                      type="button"
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
+                        activeSongId === s.id
+                          ? "bg-white/20 text-white"
+                          : "bg-transparent text-gray-300 hover:bg-white/10"
+                      }`}
+                      onClick={() => openFavoritePicker(s.id)}
+                      aria-label="Add to playlist"
+                    >
+                      <span className="text-base leading-none">+</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-red-300 transition hover:bg-red-500/20 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={deletingId === s.id}
+                      onClick={async () => {
+                        setErr(null);
+                        const ok = window.confirm(`Delete "${s.title}"? This can't be undone.`);
+                        if (!ok) return;
+                        try {
+                          setDeletingId(s.id);
+                          await api.deleteSong(s.id);
+                          setSongs((prev) => prev.filter((x) => x.id !== s.id));
+                        } catch (e: any) {
+                          setErr(e?.message || "Failed to delete song");
+                        } finally {
+                          setDeletingId(null);
+                        }
+                      }}
+                      aria-label={deletingId === s.id ? "Deleting…" : "Delete song"}
+                    >
+                      {deletingId === s.id ? (
+                        <span className="text-[10px]">…</span>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
                         >
-                          {addingToId === pl.id ? "Adding…" : pl.name}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span>You don&apos;t have any playlists yet.</span>
-                      <Link
-                        to="/playlists"
-                        className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
-                      >
-                        Create a playlist
-                      </Link>
-                    </div>
-                  )}
-                </div>
-                  ) : null
+                          <path
+                            d="M9 3h6a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1Zm1 3h4V5h-4v1Zm-2 2v10h8V8H8Zm2 2h2v6h-2v-6Zm4 0h2v6h-2v-6Z"
+                            fill="#FFFFFF"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                    {activeSongId === s.id && (
+                      <div className="absolute right-10 top-9 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
+                        <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                          Add to playlist
+                        </div>
+                        {playlistsLoading ? (
+                          <div className="px-2 py-1.5 text-gray-300">Loading playlists…</div>
+                        ) : playlists && playlists.length > 0 ? (
+                          <div className="flex flex-col gap-1.5">
+                            {playlists.map((pl) => (
+                              <button
+                                key={pl.id}
+                                type="button"
+                                className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-gray-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={addingToId === pl.id}
+                                onClick={() => handleAddToPlaylist(pl.id, s.id)}
+                              >
+                                <span className="truncate">{pl.name}</span>
+                                {addingToId === pl.id && <span className="ml-2 text-[10px] text-gray-300">Adding…</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+                            <span className="text-[11px] text-gray-300">You don&apos;t have any playlists yet.</span>
+                            <Link
+                              to="/playlists"
+                              className="rounded-full border border-white/30 bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white hover:border-white/60"
+                            >
+                              Create a playlist
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 }
               />
             );
