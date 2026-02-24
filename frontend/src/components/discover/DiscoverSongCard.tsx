@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../../lib/media";
+import { playerStore } from "../../stores/playerStore";
 
 type DiscoverSong = {
   id: string;
@@ -51,13 +52,21 @@ export function DiscoverSongCard({
 
   return (
     <div className="group flex w-full flex-col overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect?.();
+          }
+        }}
         className="relative block w-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-black"
+        aria-label={`Open ${song.title || "song"}`}
       >
-        <div className="relative mx-auto w-full max-w-[220px]">
-          <div className="aspect-[4/5] w-full overflow-hidden rounded-xl bg-slate-800">
+        <div className="relative mx-auto w-full max-w-[220px] group/cover">
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-slate-800">
             {coverImageSrc ? (
               <img
                 src={coverImageSrc}
@@ -74,20 +83,29 @@ export function DiscoverSongCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onPlay();
+                  if (isPlaying) {
+                    playerStore.pause();
+                  } else {
+                    onPlay();
+                  }
                 }}
-                className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400"
+                className="absolute inset-0 focus:outline-none"
+                aria-label={isPlaying ? "Pause" : "Play"}
               >
-                {isPlaying ? (
-                  <Pause className="h-4 w-4 fill-white" />
-                ) : (
-                  <Play className="h-4 w-4 translate-x-[1px] fill-white" />
-                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover/cover:opacity-100 group-focus-within/cover:opacity-100">
+                  <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
+                    {isPlaying ? (
+                      <Pause className="h-5 w-5 text-white fill-white" />
+                    ) : (
+                      <Play className="h-5 w-5 text-white fill-white" />
+                    )}
+                  </div>
+                </div>
               </button>
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-2">
         <div className="space-y-1">
