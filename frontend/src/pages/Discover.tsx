@@ -56,7 +56,6 @@ export default function Discover() {
   const [optimistic, setOptimistic] = useState<Record<string, { like_count: number; liked_by_me: boolean }>>({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
-  const [playlistPopupPosition, setPlaylistPopupPosition] = useState<{ top: number; left: number } | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [addingToId, setAddingToId] = useState<string | null>(null);
@@ -238,26 +237,9 @@ export default function Discover() {
       });
   };
 
-  const openPlaylistPicker = async (songId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+  const openPlaylistPicker = async (songId: string) => {
     setError(null);
-    // If clicking the same song, toggle the popup off
-    if (activeSongId === songId) {
-      setActiveSongId(null);
-      setPlaylistPopupPosition(null);
-      return;
-    }
-
-    // Position the popup next to the clicked button using viewport coordinates
-    const rect = event.currentTarget.getBoundingClientRect();
-    const verticalOffset = 8;
-    const horizontalOffset = 0;
-    const popupWidth = 224; // ~ w-56
-    const top = rect.bottom + verticalOffset;
-    const maxLeft = window.innerWidth - popupWidth - 8;
-    const left = Math.min(rect.left + horizontalOffset, maxLeft);
-
-    setActiveSongId(songId);
-    setPlaylistPopupPosition({ top, left });
+    setActiveSongId((current) => (current === songId ? null : songId));
 
     // Lazy-load playlists the first time they are needed
     if (playlists === null) {
@@ -400,17 +382,14 @@ export default function Discover() {
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void openPlaylistPicker(s.id, e);
+                                    void openPlaylistPicker(s.id);
                                   }}
                                   aria-label="Add to playlist"
                                 >
                                   +
                                 </button>
-                                {activeSongId === s.id && playlistPopupPosition && (
-                                  <div
-                                    className="fixed z-50 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg"
-                                    style={{ top: playlistPopupPosition.top, left: playlistPopupPosition.left }}
-                                  >
+                                {activeSongId === s.id && (
+                                  <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
                                     <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                                       Add to playlist
                                     </div>
@@ -498,17 +477,14 @@ export default function Discover() {
                               }`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                void openPlaylistPicker(s.id, e);
+                                void openPlaylistPicker(s.id);
                               }}
                               aria-label="Add to playlist"
                             >
                               +
                             </button>
-                            {activeSongId === s.id && playlistPopupPosition && (
-                              <div
-                                className="fixed z-50 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg"
-                                style={{ top: playlistPopupPosition.top, left: playlistPopupPosition.left }}
-                              >
+                            {activeSongId === s.id && (
+                              <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
                                 <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                                   Add to playlist
                                 </div>
