@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { api, Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
@@ -78,6 +79,9 @@ export default function Discover() {
   >({});
   const [showAllPopularSongs, setShowAllPopularSongs] = useState(false);
   const [showAllPopularArtists, setShowAllPopularArtists] = useState(false);
+  const addToButtonRef = useRef<HTMLButtonElement | null>(null);
+  const addToMenuRef = useRef<HTMLDivElement | null>(null);
+  const [addToMenuPosition, setAddToMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -200,6 +204,34 @@ export default function Discover() {
     void loadProfiles();
   }, [popularArtistsStats, artistProfiles]);
 
+  // Close "Add to playlist" popup when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!activeSongId) return;
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      if (addToButtonRef.current?.contains(target)) return;
+      if (addToMenuRef.current?.contains(target)) return;
+
+      setActiveSongId(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveSongId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeSongId]);
+
   const handlePlaySong = (song: DiscoverSong) => {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
@@ -261,9 +293,24 @@ export default function Discover() {
       });
   };
 
-  const openPlaylistPicker = async (songId: string) => {
+  const openPlaylistPicker = async (songId: string, buttonEl?: HTMLButtonElement | null) => {
     setError(null);
-    setActiveSongId((current) => (current === songId ? null : songId));
+    setActiveSongId((current) => {
+      const next = current === songId ? null : songId;
+      if (next && buttonEl) {
+        const rect = buttonEl.getBoundingClientRect();
+        const MENU_WIDTH = 224; // w-56
+        const PADDING = 8;
+        const maxLeft = window.innerWidth - MENU_WIDTH - PADDING;
+        const idealLeft = rect.right - MENU_WIDTH;
+        const left = Math.max(PADDING, Math.min(maxLeft, idealLeft));
+        const top = rect.bottom + PADDING;
+        setAddToMenuPosition({ top, left });
+      } else {
+        setAddToMenuPosition(null);
+      }
+      return next;
+    });
 
     // Lazy-load playlists the first time they are needed
     if (playlists === null) {
@@ -401,6 +448,7 @@ export default function Discover() {
                               <>
                                 <button
                                   type="button"
+                                  ref={activeSongId === s.id ? addToButtonRef : null}
                                   className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
                                     activeSongId === s.id
                                       ? "bg-blue-500/20 text-blue-200"
@@ -408,14 +456,26 @@ export default function Discover() {
                                   }`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void openPlaylistPicker(s.id);
+                                    void openPlaylistPicker(s.id, e.currentTarget);
                                   }}
                                   aria-label="Add to playlist"
                                 >
                                   +
                                 </button>
-                                {activeSongId === s.id && (
-                                  <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
+                                {activeSongId === s.id &&
+                                  addToMenuPosition &&
+                                  typeof document !== "undefined" &&
+                                  createPortal(
+                                    <div
+                                      ref={activeSongId === s.id ? addToMenuRef : null}
+                                      style={{
+                                        position: "fixed",
+                                        top: addToMenuPosition.top,
+                                        left: addToMenuPosition.left,
+                                        zIndex: 50,
+                                      }}
+                                      className="w-56 rounded-md border border-white/10 bg-gray-900/90 p-2 text-xs shadow-lg"
+                                    >
                                     <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                                       Add to playlist
                                     </div>
@@ -451,7 +511,8 @@ export default function Discover() {
                                         </Link>
                                       </div>
                                     )}
-                                  </div>
+                                  </div>,
+                                  document.body
                                 )}
                               </>
                             }
@@ -498,6 +559,7 @@ export default function Discover() {
                           <>
                             <button
                               type="button"
+                              ref={activeSongId === s.id ? addToButtonRef : null}
                               className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
                                 activeSongId === s.id
                                   ? "bg-blue-500/20 text-blue-200"
@@ -505,14 +567,26 @@ export default function Discover() {
                               }`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                void openPlaylistPicker(s.id);
+                                void openPlaylistPicker(s.id, e.currentTarget);
                               }}
                               aria-label="Add to playlist"
                             >
                               +
                             </button>
-                            {activeSongId === s.id && (
-                              <div className="absolute right-10 top-8 z-20 w-56 rounded-md border border-white/10 bg-gray-900/80 p-2 text-xs shadow-lg">
+                            {activeSongId === s.id &&
+                              addToMenuPosition &&
+                              typeof document !== "undefined" &&
+                              createPortal(
+                                <div
+                                  ref={activeSongId === s.id ? addToMenuRef : null}
+                                  style={{
+                                    position: "fixed",
+                                    top: addToMenuPosition.top,
+                                    left: addToMenuPosition.left,
+                                    zIndex: 50,
+                                  }}
+                                  className="w-56 rounded-md border border-white/10 bg-gray-900/90 p-2 text-xs shadow-lg"
+                                >
                                 <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                                   Add to playlist
                                 </div>
@@ -548,7 +622,8 @@ export default function Discover() {
                                     </Link>
                                   </div>
                                 )}
-                              </div>
+                              </div>,
+                              document.body
                             )}
                           </>
                         }

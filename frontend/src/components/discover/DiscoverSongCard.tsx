@@ -1,4 +1,5 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Play, Pause, Heart, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../../lib/media";
@@ -46,12 +47,43 @@ export function DiscoverSongCard({
   footer,
 }: DiscoverSongCardProps) {
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [shareMenuPosition, setShareMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const shareButtonRef = useRef<HTMLButtonElement | null>(null);
+  const shareMenuRef = useRef<HTMLDivElement | null>(null);
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/songs/${encodeURIComponent(song.id)}` : "";
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
 
+  // Close share menu when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!isShareMenuOpen) return;
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      if (shareButtonRef.current?.contains(target)) return;
+      if (shareMenuRef.current?.contains(target)) return;
+
+      setIsShareMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsShareMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isShareMenuOpen]);
+
   return (
-    <div className="group flex w-full flex-col overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
+    <div className="group relative flex w-full flex-col rounded-xl bg-gradient-to-b from-white/5 to-black/60 text-xs text-gray-200 shadow-sm hover:from-white/10 hover:shadow-lg transition">
       <div
         role="button"
         tabIndex={0}
@@ -188,19 +220,42 @@ export function DiscoverSongCard({
 
           <button
             type="button"
+            ref={shareButtonRef}
             className={`ml-auto inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
               isShareMenuOpen ? "bg-white/20 text-white" : "bg-transparent text-gray-300 hover:bg-white/10"
             }`}
             onClick={(e) => {
               e.stopPropagation();
+              if (!isShareMenuOpen && shareButtonRef.current) {
+                const rect = shareButtonRef.current.getBoundingClientRect();
+                const MENU_WIDTH = 224; // w-56
+                const PADDING = 8;
+                const maxLeft = window.innerWidth - MENU_WIDTH - PADDING;
+                const idealLeft = rect.right - MENU_WIDTH;
+                const left = Math.max(PADDING, Math.min(maxLeft, idealLeft));
+                const top = rect.bottom + PADDING;
+                setShareMenuPosition({ top, left });
+              }
               setIsShareMenuOpen((open) => !open);
             }}
           >
             <Share2 className="h-3 w-3" aria-hidden="true" />
             <span className="sr-only">Share</span>
           </button>
-          {isShareMenuOpen && (
-            <div className="absolute right-0 top-8 z-20 w-52 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg">
+          {isShareMenuOpen &&
+            shareMenuPosition &&
+            typeof document !== "undefined" &&
+            createPortal(
+              <div
+                ref={shareMenuRef}
+                style={{
+                  position: "fixed",
+                  top: shareMenuPosition.top,
+                  left: shareMenuPosition.left,
+                  zIndex: 50,
+                }}
+                className="w-56 rounded-md border border-white/10 bg-slate-900/95 p-2 text-xs shadow-lg"
+              >
               <div className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
                 Share track
               </div>
@@ -267,7 +322,8 @@ export function DiscoverSongCard({
               >
                 <span>Share to WeChat</span>
               </button>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
