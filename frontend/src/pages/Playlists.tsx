@@ -180,7 +180,7 @@ export default function PlaylistsPage() {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Playlists</h1>
-            <p className="mt-2 text-sm text-gray-300">Organize your generated songs into playlists.</p>
+            <p className="mt-2 text-sm text-gray-300">Organize your AI-generated songs into playlists. Create collections and share your favorite AI music.</p>
           </div>
         </div>
 

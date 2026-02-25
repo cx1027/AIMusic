@@ -109,8 +109,8 @@ export default function Generate() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Generate</h1>
-      <p className="mt-2 text-sm text-gray-300">Create a generation task and watch progress via SSE.</p>
+      <h1 className="text-2xl font-semibold">Generate AI Song</h1>
+      <p className="mt-2 text-sm text-gray-300">Create your AI-generated song from a text prompt. Watch the magic happen as our AI brings your musical ideas to life.</p>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
@@ -180,7 +180,7 @@ export default function Generate() {
           </div>
           {err ? <div className="text-sm text-red-300">{err}</div> : null}
           <button className="w-full rounded-md bg-white px-3 py-2 text-black" onClick={start}>
-            Start generation
+            Generate AI Song
           </button>
         </div>
 

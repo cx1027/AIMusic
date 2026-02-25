@@ -71,8 +71,8 @@ export default function Share() {
           jsApiList: ["updateAppMessageShareData", "updateTimelineShareData"]
         });
         wx.ready(() => {
-          const title = data?.file.original_filename || "Shared track from AIMusic";
-          const desc = "Listen to this AI-generated track on AIMusic.";
+          const title = data?.file.original_filename || "Shared AI song from AIMusic";
+          const desc = "Listen to this AI-generated song created on AIMusic - AI Songs Generation & Sharing Platform.";
           const imgUrl = `${window.location.origin}/favicon.ico`;
           wx.updateAppMessageShareData({
             title,
@@ -120,8 +120,8 @@ export default function Share() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-semibold text-white">Shared track</h1>
-      <p className="mt-2 text-sm text-gray-300 break-all">Link: {shareUrl}</p>
+      <h1 className="text-2xl font-semibold text-white">Shared AI Song</h1>
+      <p className="mt-2 text-sm text-gray-300 break-all">Share link: {shareUrl}</p>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-gray-300">
         <button

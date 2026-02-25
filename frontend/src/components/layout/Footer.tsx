@@ -112,7 +112,7 @@ export default function Footer() {
         <div className="mt-12 border-t border-white/10 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div className="text-sm text-slate-400">
-              © {new Date().getFullYear()} AI Music. All rights reserved.
+              © {new Date().getFullYear()} AI Music - AI Songs Generation & Sharing Platform. All rights reserved.
             </div>
             <div className="flex flex-wrap gap-6 text-xs text-slate-500">
               <a href="#" className="hover:text-slate-400 transition">

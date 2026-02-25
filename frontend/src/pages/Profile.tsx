@@ -743,12 +743,12 @@ export default function Profile() {
       </div>
 
       <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-4">Public Songs</h2>
+        <h2 className="text-xl font-semibold mb-4">Public AI Songs</h2>
         <div className={`rounded-xl border border-white/10 bg-white/5 p-5 transition-all ${selectedSongId ? 'max-w-3xl' : ''}`}>
           {songsLoading ? (
             <div className="text-gray-300">Loading…</div>
           ) : publicSongs.length === 0 ? (
-            <div className="text-gray-400">No public songs yet.</div>
+            <div className="text-gray-400">No public AI songs shared yet.</div>
           ) : (
             <div className="grid gap-3">
               {publicSongs.map((song) => (

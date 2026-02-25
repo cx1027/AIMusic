@@ -31,9 +31,9 @@ export default function Login() {
     <div className="mx-auto max-w-md px-4 py-10">
       <h1 className="text-2xl font-semibold">Login</h1>
       <p className="mt-2 text-sm text-gray-300">
-        No account?{" "}
+        Sign in to generate and share AI songs.{" "}
         <Link className="underline" to="/register">
-          Register
+          Create an account
         </Link>
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">

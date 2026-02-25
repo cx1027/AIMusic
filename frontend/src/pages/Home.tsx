@@ -6,7 +6,6 @@ import { PopularArtistCard } from "../components/discover/PopularArtistCard";
 import { inferGenresFromPrompt } from "../lib/genres";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
-import Footer from "../components/layout/Footer";
 import { Music, Download, Sparkles, ArrowRight, Smartphone } from "lucide-react";
 
 type DiscoverSong = {
@@ -193,30 +192,30 @@ export default function Home() {
           <div className="text-center">
             <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl">
               <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-blue-300 bg-clip-text text-transparent">
-                180 Million Songs
+                Create AI Songs
               </span>
               <br />
-              Listen Anytime, Anywhere
+              Generate & Share Your Music
               <br />
-              <span className="text-4xl sm:text-5xl md:text-6xl">Free 30-Day Trial</span>
+              <span className="text-4xl sm:text-5xl md:text-6xl">Powered by AI</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-300 sm:text-xl">
-              Experience unlimited streaming with premium sound quality. Download your favorites and enjoy offline. 
-              Discover animated lyrics and immerse yourself in music like never before.
+              Transform your ideas into music with AI. Generate unique songs from text prompts, share them with the community, 
+              and discover amazing AI-generated tracks from creators worldwide.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <Link
                 to="/register"
                 className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-base font-semibold text-black shadow-lg transition hover:bg-slate-100 hover:shadow-xl"
               >
-                Start Free Trial
+                Start Creating
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
                 to="/discover"
                 className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 bg-white/5 px-6 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:border-white/50 hover:bg-white/10"
               >
-                Browse Popular Songs
+                Discover AI Songs
               </Link>
               <Link
                 to="/pricing"
@@ -226,7 +225,7 @@ export default function Home() {
               </Link>
             </div>
             <p className="mt-6 text-sm text-slate-400">
-              No credit card required · Sync across all devices
+              Create unlimited AI songs · Share with the community
             </p>
           </div>
         </div>
@@ -241,9 +240,9 @@ export default function Home() {
               <div className="mb-4 inline-flex rounded-full bg-purple-500/20 p-3">
                 <Music className="h-6 w-6 text-purple-300" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-white">Premium Sound Quality</h3>
+              <h3 className="mb-2 text-xl font-semibold text-white">AI-Powered Generation</h3>
               <p className="text-sm text-slate-300">
-                Experience crystal-clear audio with up to 320kbps bitrate. Every detail preserved for the ultimate listening experience.
+                Create unique songs from simple text prompts. Our AI understands your vision and brings it to life with professional-quality music.
               </p>
             </div>
 
@@ -252,9 +251,9 @@ export default function Home() {
               <div className="mb-4 inline-flex rounded-full bg-pink-500/20 p-3">
                 <Download className="h-6 w-6 text-pink-300" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-white">Offline Downloads</h3>
+              <h3 className="mb-2 text-xl font-semibold text-white">Share & Discover</h3>
               <p className="text-sm text-slate-300">
-                Download entire playlists and albums with one tap. Enjoy your music anywhere, even without an internet connection.
+                Share your AI-generated songs with the world and discover amazing tracks from other creators. Build your music library and connect with the community.
               </p>
             </div>
 
@@ -263,9 +262,9 @@ export default function Home() {
               <div className="mb-4 inline-flex rounded-full bg-blue-500/20 p-3">
                 <Sparkles className="h-6 w-6 text-blue-300" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-white">Animated Lyrics</h3>
+              <h3 className="mb-2 text-xl font-semibold text-white">Customize & Control</h3>
               <p className="text-sm text-slate-300">
-                Word-by-word highlighting with real-time sync. Includes romanization and translations for a deeper connection.
+                Control genre, duration, lyrics, and more. Fine-tune your AI-generated songs to match your creative vision perfectly.
               </p>
             </div>
           </div>
@@ -277,9 +276,9 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-white">Song Recommendations</h2>
+              <h2 className="text-3xl font-bold text-white">Popular AI Songs</h2>
               <p className="mt-2 text-slate-300">
-                Curated selection of the most popular tracks and playlists right now.
+                Discover trending AI-generated tracks created by our community of music creators.
               </p>
             </div>
             <Link
@@ -294,7 +293,7 @@ export default function Home() {
           {error && !loading && <div className="text-sm text-red-300">{error}</div>}
           {!loading && !error && !trending.length && (
             <div className="text-sm text-slate-400">
-              No public songs yet. Be the first to create one.
+              No AI songs shared yet. Be the first to generate and share one.
             </div>
           )}
 
@@ -349,12 +348,11 @@ export default function Home() {
               </div>
               <div className="flex-1">
                 <h3 className="mb-2 text-lg font-semibold text-white">
-                  ARTIST NOTICE · Japanese Idol Special Feature
+                  CREATOR SPOTLIGHT · Top AI Music Creators
                 </h3>
                 <p className="text-sm text-slate-300">
-                  Exclusive playlists and recommendations featuring <strong className="text-white">Hey! Say! JUMP</strong>, 
-                  {" "}<strong className="text-white">Travis Japan</strong>, and other popular Japanese idol artists. 
-                  New content updated regularly.
+                  Discover talented creators who are pushing the boundaries of AI music generation. 
+                  Explore their unique styles and get inspired for your next AI song creation.
                 </p>
               </div>
             </div>
@@ -362,9 +360,9 @@ export default function Home() {
 
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-white">Artist Recommendations</h2>
+              <h2 className="text-3xl font-bold text-white">Top AI Music Creators</h2>
               <p className="mt-2 text-slate-300">
-                Discover creators and bands that match your taste.
+                Discover talented creators who are generating amazing AI songs and sharing them with the community.
               </p>
             </div>
             <Link
@@ -378,7 +376,7 @@ export default function Home() {
           {loading && <div className="text-sm text-slate-300">Finding standout artists…</div>}
           {error && !loading && <div className="text-sm text-red-300">{error}</div>}
           {!loading && !error && !popularArtists.length && (
-            <div className="text-sm text-slate-400">Artists will appear here as songs get likes.</div>
+            <div className="text-sm text-slate-400">Top creators will appear here as AI songs get likes and shares.</div>
           )}
 
           {!loading && !error && popularArtists.length > 0 && (
@@ -407,11 +405,11 @@ export default function Home() {
                   <Smartphone className="h-6 w-6 text-purple-300" />
                 </div>
                 <h2 className="mb-4 text-3xl font-bold text-white">
-                  Download the App
+                  Create Anywhere
                 </h2>
                 <p className="mb-6 text-slate-300">
-                  Sync your music life across phone, tablet, and desktop. Access your offline downloads, 
-                  listening history, and playlists seamlessly on all devices.
+                  Generate AI songs on any device. Access your library, playlists, and shared creations 
+                  seamlessly across phone, tablet, and desktop.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <a
@@ -456,9 +454,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

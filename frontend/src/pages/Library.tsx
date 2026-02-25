@@ -170,7 +170,7 @@ export default function Library() {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Library</h1>
-            <p className="mt-2 text-sm text-gray-300">Your generated songs.</p>
+            <p className="mt-2 text-sm text-gray-300">Your AI-generated songs. Manage, organize, and share your creations.</p>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export default function Library() {
 
         {loading ? <div className="text-gray-300">Loading…</div> : null}
         {err ? <div className="mt-2 text-sm text-red-300">{err}</div> : null}
-        {!loading && !err && songs.length === 0 ? <div className="mt-2 text-gray-400">No songs yet.</div> : null}
+        {!loading && !err && songs.length === 0 ? <div className="mt-2 text-gray-400">No AI songs generated yet. Start creating your first AI song!</div> : null}
 
         <div className="mt-4 grid gap-3">
           {songs.map((s) => {

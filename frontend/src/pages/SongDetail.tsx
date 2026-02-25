@@ -56,7 +56,7 @@ export default function SongDetail() {
 
     const shareUrl = `${window.location.origin}/songs/${song.id}`;
     const coverImageUrl = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
-    const description = song.prompt || `Listen to ${song.title} on AI Music`;
+    const description = song.prompt || `Listen to this AI-generated song "${song.title}" on AI Music - AI Songs Generation & Sharing Platform`;
 
     // Update document title
     document.title = `${song.title} - AI Music`;
@@ -185,7 +185,7 @@ export default function SongDetail() {
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-400">Song</p>
+              <p className="text-xs uppercase tracking-wide text-gray-400">AI Song</p>
               <h1 className="mt-1 text-3xl font-semibold text-white">{song.title}</h1>
               <p className="mt-2 text-sm text-gray-300">
                 Generated at {new Date(song.created_at).toLocaleString()}

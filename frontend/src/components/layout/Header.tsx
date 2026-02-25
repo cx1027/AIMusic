@@ -24,7 +24,7 @@ export default function Header() {
     <div className="border-b border-white/10 bg-black/20">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link to="/" className="font-semibold tracking-tight">
-          AI Music
+          AI Music · Generate & Share
         </Link>
         <div className="flex items-center gap-4 text-sm text-gray-200">
           <Link className="hover:text-white" to="/generate">

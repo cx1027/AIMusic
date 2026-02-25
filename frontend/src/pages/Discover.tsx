@@ -276,7 +276,7 @@ export default function Discover() {
           <div>
             <h1 className="text-2xl font-semibold">Discover</h1>
             <p className="mt-2 text-sm text-gray-300">
-              Explore popular tracks and artists from the public library.
+              Explore AI-generated songs and creators from our community. Discover trending tracks, popular genres, and talented AI music creators.
             </p>
           </div>
           <Link className="rounded-full bg-white px-3 py-2 text-sm font-medium text-black hover:bg-gray-100" to="/generate">
@@ -319,7 +319,7 @@ export default function Discover() {
           {loading && <div className="mt-4 text-sm text-gray-300">Loading discover feed…</div>}
           {error && !loading && <div className="mt-4 text-sm text-red-300">{error}</div>}
           {!loading && !error && !popularSongs.length && (
-            <div className="mt-4 text-xs text-gray-400">No songs yet.</div>
+            <div className="mt-4 text-xs text-gray-400">No AI songs shared yet. Be the first to generate and share one.</div>
           )}
 
           {!loading && !error && popularSongs.length > 0 && (
@@ -561,7 +561,7 @@ export default function Discover() {
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <h2 className="text-sm font-semibold text-white">Popular Artists</h2>
                     <span className="text-[11px] text-gray-400">
-                      Based on the most liked tracks{genre ? ` in ${genre}` : ""}
+                      Top creators based on most liked AI songs{genre ? ` in ${genre}` : ""}
                     </span>
                   </div>
                   {!showAllPopularArtists ? (
