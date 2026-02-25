@@ -148,6 +148,33 @@ def toggle_like_song(
     return {"song_id": song.id, "liked": liked, "like_count": song.like_count}
 
 
+@router.post("/{song_id}/play")
+def increment_play_count(
+    song_id: UUID,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+) -> dict:
+    """
+    Increment play_count for a song.
+
+    We allow optional authentication here so that anonymous plays
+    can still be counted if the frontend calls this without a token.
+    """
+    song = db.get(Song, song_id)
+    if not song:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+
+    # Simple increment – this is not meant to be perfectly accurate analytics,
+    # just a lightweight popularity signal.
+    song.play_count += 1
+
+    db.add(song)
+    db.commit()
+    db.refresh(song)
+
+    return {"song_id": str(song.id), "play_count": song.play_count}
+
+
 @router.patch("/{song_id}/visibility", response_model=SongPublic)
 def update_song_visibility(
     song_id: UUID,

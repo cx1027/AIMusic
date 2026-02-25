@@ -10,6 +10,7 @@ type BaseSong = {
   audio_url?: string | null;
   cover_image_url?: string | null;
   created_at: string;
+  play_count?: number;
 };
 
 type SongCardProps = {
@@ -184,7 +185,7 @@ export default function SongCard({
                 {song.audio_url ? (
                   <button
                     type="button"
-                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] transition ${
                       isPlaying
                         ? "bg-white/20 text-white"
                         : "bg-transparent text-gray-300 hover:bg-white/10"
@@ -208,6 +209,7 @@ export default function SongCard({
                         <span className="sr-only">Play</span>
                       </>
                     )}
+                    <span>{song.play_count ?? 0}</span>
                   </button>
                 ) : (
                   <div className="text-[11px] text-gray-500">No audio</div>
@@ -370,7 +372,7 @@ export default function SongCard({
                 {song.audio_url ? (
                   <button
                     type="button"
-                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] transition ${
                       isPlaying
                         ? "bg-white/20 text-white"
                         : "bg-transparent text-gray-300 hover:bg-white/10"
@@ -394,6 +396,7 @@ export default function SongCard({
                         <span className="sr-only">Play</span>
                       </>
                     )}
+                    <span>{song.play_count ?? 0}</span>
                   </button>
                 ) : (
                   <div className="text-xs text-gray-500">No audio</div>

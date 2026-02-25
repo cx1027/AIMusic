@@ -12,6 +12,7 @@ type Song = {
   audio_url?: string | null;
   created_at: string;
   is_public: boolean;
+  play_count?: number;
   like_count?: number;
   liked_by_me?: boolean;
 };
@@ -418,6 +419,26 @@ export default function Profile() {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
     if (!url) return;
+
+    // Optimistically bump play count
+    setPublicSongs((prev) =>
+      prev.map((s) =>
+        s.id === song.id
+          ? {
+              ...s,
+              play_count: (s.play_count ?? 0) + 1,
+            }
+          : s
+      )
+    );
+
+    // Persist to backend (best-effort)
+    void api
+      .incrementPlayCount(song.id)
+      .catch(() => {
+        // ignore errors
+      });
+
     playerStore.setQueue(
       [
         {

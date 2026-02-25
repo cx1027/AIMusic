@@ -137,7 +137,7 @@ export function DiscoverSongCard({
             <button
               type="button"
               onClick={() => onPlay?.()}
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] transition ${
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] transition ${
                 isPlaying ? "bg-white/20 text-white" : "bg-transparent text-gray-300 hover:bg-white/10"
               }`}
             >
@@ -152,6 +152,7 @@ export function DiscoverSongCard({
                   <span className="sr-only">Play</span>
                 </>
               )}
+              <span>{song.play_count}</span>
             </button>
           ) : (
             <div className="text-[11px] text-gray-500">No audio</div>

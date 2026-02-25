@@ -30,7 +30,9 @@ export default function Home() {
   const [trending, setTrending] = useState<DiscoverSong[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [optimistic, setOptimistic] = useState<Record<string, { like_count: number; liked_by_me: boolean }>>({});
+  const [optimistic, setOptimistic] = useState<
+    Record<string, { like_count: number; liked_by_me: boolean; play_count?: number }>
+  >({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
@@ -103,6 +105,28 @@ export default function Home() {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
     if (!url) return;
+
+    // Optimistically bump play count
+    setOptimistic((prev) => {
+      const prevState = prev[song.id];
+      const currentPlayCount = prevState?.play_count ?? song.play_count;
+      return {
+        ...prev,
+        [song.id]: {
+          like_count: prevState?.like_count ?? song.like_count,
+          liked_by_me: prevState?.liked_by_me ?? song.liked_by_me,
+          play_count: currentPlayCount + 1,
+        },
+      };
+    });
+
+    // Persist play count to backend (best-effort)
+    void api
+      .incrementPlayCount(song.id)
+      .catch(() => {
+        // ignore errors
+      });
+
     playerStore.setQueue(
       [
         {
@@ -303,6 +327,7 @@ export default function Home() {
                 const state = optimistic[s.id] ?? {
                   like_count: s.like_count,
                   liked_by_me: s.liked_by_me,
+                  play_count: s.play_count,
                 };
                 const isLoading = loadingIds.has(s.id);
                 const isPlaying = currentPlayingId === s.id;
@@ -316,6 +341,7 @@ export default function Home() {
                   ...s,
                   like_count: state.like_count,
                   liked_by_me: state.liked_by_me,
+                  play_count: state.play_count ?? s.play_count,
                 };
 
                 return (

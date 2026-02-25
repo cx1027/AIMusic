@@ -14,6 +14,7 @@ type SongRow = {
   created_at: string;
   genre?: string | null;
   is_public: boolean;
+  play_count?: number;
   like_count?: number;
   liked_by_me?: boolean;
 };
@@ -54,6 +55,25 @@ export default function Library() {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
     if (!url) return;
+    // Optimistically bump play count
+    setSongs((prev) =>
+      prev.map((x) =>
+        x.id === song.id
+          ? {
+              ...x,
+              play_count: (x.play_count ?? 0) + 1,
+            }
+          : x
+      )
+    );
+
+    // Persist to backend (best-effort)
+    void api
+      .incrementPlayCount(song.id)
+      .catch(() => {
+        // ignore errors
+      });
+
     playerStore.setQueue(
       [
         {

@@ -165,12 +165,29 @@ export default function PlaylistsPage() {
   const handlePlayPlaylist = () => {
     const queue = buildQueueFromSelected();
     if (!queue) return;
+    // Persist play counts for all songs in the playlist run (best-effort, no optimistic UI needed here)
+    queue.items.forEach((item) => {
+      void api
+        .incrementPlayCount(item.id)
+        .catch(() => {
+          // ignore errors
+        });
+    });
+
     playerStore.setQueue(queue.items, queue.startIndex);
   };
 
   const handlePlayFromSong = (songId: string) => {
     const queue = buildQueueFromSelected(songId);
     if (!queue) return;
+
+    // Persist a play for the specific song (best-effort)
+    void api
+      .incrementPlayCount(songId)
+      .catch(() => {
+        // ignore errors
+      });
+
     playerStore.setQueue(queue.items, queue.startIndex);
   };
 

@@ -100,6 +100,7 @@ export const api = {
         created_at: string;
         genre?: string | null;
         is_public: boolean;
+        play_count?: number;
         like_count?: number;
         liked_by_me?: boolean;
       }>
@@ -280,6 +281,10 @@ export const api = {
         details?: string | null;
       }>
     >(`/api/users/${userId}/following`),
+  incrementPlayCount: (songId: string) =>
+    http<{ song_id: string; play_count: number }>(`/api/songs/${songId}/play`, {
+      method: "POST"
+    }),
 };
 
 

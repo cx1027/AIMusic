@@ -53,7 +53,9 @@ export default function Discover() {
   const [genre, setGenre] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [optimistic, setOptimistic] = useState<Record<string, { like_count: number; liked_by_me: boolean }>>({});
+  const [optimistic, setOptimistic] = useState<
+    Record<string, { like_count: number; liked_by_me: boolean; play_count?: number }>
+  >({});
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [activeSongId, setActiveSongId] = useState<string | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[] | null>(null);
@@ -202,6 +204,28 @@ export default function Discover() {
     if (!song.audio_url) return;
     const url = resolveMediaUrl(song.audio_url);
     if (!url) return;
+
+    // Optimistically bump play count locally
+    setOptimistic((prev) => {
+      const prevState = prev[song.id];
+      const currentPlayCount = prevState?.play_count ?? song.play_count;
+      return {
+        ...prev,
+        [song.id]: {
+          like_count: prevState?.like_count ?? song.like_count,
+          liked_by_me: prevState?.liked_by_me ?? song.liked_by_me,
+          play_count: currentPlayCount + 1,
+        },
+      };
+    });
+
+    // Persist play count to backend (fire-and-forget)
+    void api
+      .incrementPlayCount(song.id)
+      .catch(() => {
+        // ignore errors – play_count is a best-effort popularity signal
+      });
+
     playerStore.setQueue(
       [
         {
@@ -346,6 +370,7 @@ export default function Discover() {
                       const state = optimistic[s.id] ?? {
                         like_count: s.like_count,
                         liked_by_me: s.liked_by_me,
+                        play_count: s.play_count,
                       };
                       const isLoading = loadingIds.has(s.id);
                       const isPlaying = currentPlayingId === s.id;
@@ -359,6 +384,7 @@ export default function Discover() {
                         ...s,
                         like_count: state.like_count,
                         liked_by_me: state.liked_by_me,
+                        play_count: state.play_count ?? s.play_count,
                       };
 
                       return (
@@ -441,6 +467,7 @@ export default function Discover() {
                     const state = optimistic[s.id] ?? {
                       like_count: s.like_count,
                       liked_by_me: s.liked_by_me,
+                      play_count: s.play_count,
                     };
                     const isLoading = loadingIds.has(s.id);
                     const isPlaying = currentPlayingId === s.id;
@@ -451,9 +478,10 @@ export default function Discover() {
                         : s.genre ?? inferredGenres[0] ?? null;
 
                     const songWithOptimisticLikes: DiscoverSong = {
-                      ...s,
-                      like_count: state.like_count,
-                      liked_by_me: state.liked_by_me,
+                        ...s,
+                        like_count: state.like_count,
+                        liked_by_me: state.liked_by_me,
+                        play_count: state.play_count ?? s.play_count,
                     };
 
                     return (
