@@ -6,7 +6,7 @@ import time
 from typing import Any, AsyncGenerator, Dict, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sse_starlette.sse import EventSourceResponse
 from sqlmodel import Session
 
@@ -20,17 +20,20 @@ router = APIRouter()
 
 class GenerateRequestPayload(Dict[str, Any]):
     """
-    Lightweight payload container (kept intentionally flexible for MVP).
+    Payload for music generation.
     Expected keys:
-      - prompt: str
-      - lyrics: Optional[str]
-      - duration: int
+      - mode: str ("simple" or "custom") - required
+      - For simple mode: sample_query (required)
+      - For custom mode: prompt (required), lyrics (optional)
+      - Optional: thinking, audio_duration, bpm, vocal_language, audio_format, inference_steps, batch_size
+      - title: Optional[str]
+      - genre: Optional[str]
     """
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_generation(
-    payload: Dict[str, Any],
+    payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
@@ -40,21 +43,79 @@ def create_generation(
         if not title:
             title = None
 
-    prompt = (payload.get("prompt") or "").strip()
-    if not prompt:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="prompt is required")
+    # Mode selection: "simple" or "custom" - required
+    mode_raw = payload.get("mode")
+    if mode_raw is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="mode is required (must be 'simple' or 'custom')")
+    if not isinstance(mode_raw, str):
+        mode_raw = str(mode_raw)
+    mode = mode_raw.strip().lower()
+    if not mode or mode not in ("simple", "custom"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="mode must be 'simple' or 'custom'")
 
-    duration = payload.get("duration", 30)
+    # Validate mode-specific required fields
+    if mode == "simple":
+        sample_query = (payload.get("sample_query") or "").strip()
+        if not sample_query:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sample_query is required for simple mode")
+        prompt = None
+        lyrics = None
+    else:  # custom mode
+        prompt = (payload.get("prompt") or "").strip()
+        if not prompt:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="prompt is required for custom mode")
+        lyrics = payload.get("lyrics")
+        if lyrics is not None:
+            lyrics = str(lyrics).strip() if lyrics else None
+        sample_query = None
+
+    # Optional parameters with defaults
+    thinking = payload.get("thinking", True)
+    if not isinstance(thinking, bool):
+        thinking = True
+
+    audio_duration = payload.get("audio_duration", 60)
     try:
-        duration_int = int(duration)
+        audio_duration_int = int(audio_duration)
     except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="duration must be an integer")
-    if duration_int <= 0 or duration_int > 300:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="duration out of range (1-300)")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration must be an integer")
+    if audio_duration_int < 10 or audio_duration_int > 600:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration out of range (10-600)")
 
-    lyrics = payload.get("lyrics")
-    if lyrics is not None:
-        lyrics = str(lyrics)
+    bpm = payload.get("bpm")
+    if bpm is not None:
+        try:
+            bpm_int = int(bpm)
+            if bpm_int <= 0:
+                bpm_int = None
+        except Exception:
+            bpm_int = None
+    else:
+        bpm_int = None
+
+    vocal_language = payload.get("vocal_language", "en")
+    if not isinstance(vocal_language, str):
+        vocal_language = "en"
+
+    audio_format = payload.get("audio_format", "mp3")
+    if not isinstance(audio_format, str):
+        audio_format = "mp3"
+
+    inference_steps = payload.get("inference_steps", 8)
+    try:
+        inference_steps_int = int(inference_steps)
+        if inference_steps_int < 1:
+            inference_steps_int = 8
+    except Exception:
+        inference_steps_int = 8
+
+    batch_size = payload.get("batch_size", 1)
+    try:
+        batch_size_int = int(batch_size)
+        if batch_size_int < 1:
+            batch_size_int = 1
+    except Exception:
+        batch_size_int = 1
 
     genre = payload.get("genre")
     if genre is not None:
@@ -84,16 +145,38 @@ def create_generation(
     init_task(
         task_id,
         user_id=str(user.id),
-        payload={"title": title, "prompt": prompt, "lyrics": lyrics, "duration": duration_int, "genre": genre},
+        payload={
+            "title": title,
+            "mode": mode,
+            "prompt": prompt,
+            "sample_query": sample_query,
+            "lyrics": lyrics,
+            "audio_duration": audio_duration_int,
+            "thinking": thinking,
+            "bpm": bpm_int,
+            "vocal_language": vocal_language,
+            "audio_format": audio_format,
+            "inference_steps": inference_steps_int,
+            "batch_size": batch_size_int,
+            "genre": genre,
+        },
     )
 
     run_generation_task.delay(
         task_id=task_id,
         user_id=str(user.id),
         title=title,
+        mode=mode,
         prompt=prompt,
+        sample_query=sample_query,
         lyrics=lyrics,
-        duration=duration_int,
+        audio_duration=audio_duration_int,
+        thinking=thinking,
+        bpm=bpm_int,
+        vocal_language=vocal_language,
+        audio_format=audio_format,
+        inference_steps=inference_steps_int,
+        batch_size=batch_size_int,
         genre=genre,
     )
 

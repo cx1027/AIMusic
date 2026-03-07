@@ -10,7 +10,8 @@ from app.models.playlist_song import PlaylistSong  # noqa: F401 - needed for rel
 from app.models.playlist import Playlist  # noqa: F401 - needed for relationship resolution
 from app.models.song import Song
 from app.services.image_gen_service import FluxNotInstalledError, generate_cover_image
-from app.services.music_gen_service import generate_music
+from app.services.music_gen_service import MusicGenResult, generate_music
+from app.services.ace_step_api_service import AceStepApiError, AceStepApiParams, generate_music_via_api
 from app.services.progress_service import update_task
 from app.services.storage_service import get_storage
 from app.worker import celery_app
@@ -21,16 +22,27 @@ def run_generation_task(
     *,
     task_id: str,
     user_id: str,
-    prompt: str,
-    lyrics: str | None,
-    duration: int,
+    mode: str = "custom",
+    prompt: str | None = None,
+    sample_query: str | None = None,
+    lyrics: str | None = None,
+    audio_duration: int = 60,
+    thinking: bool = True,
+    bpm: int | None = None,
+    vocal_language: str = "en",
+    audio_format: str = "mp3",
+    inference_steps: int = 8,
+    batch_size: int = 1,
     title: str | None = None,
     genre: str | None = None,
     **_ignored: object,
 ) -> dict:
     try:
         print(f"\n{'='*80}", flush=True)
-        print(f"CELERY TASK STARTED: task_id={task_id}, prompt='{prompt[:50]}...'", flush=True)
+        if mode == "simple":
+            print(f"CELERY TASK STARTED: task_id={task_id}, mode=simple, sample_query='{sample_query[:50] if sample_query else 'N/A'}...'", flush=True)
+        else:
+            print(f"CELERY TASK STARTED: task_id={task_id}, mode=custom, prompt='{prompt[:50] if prompt else 'N/A'}...'", flush=True)
         print(f"{'='*80}\n", flush=True)
         
         # Keep progress monotonic and reserve the tail for upload/db finalize.
@@ -47,13 +59,48 @@ def run_generation_task(
             update_task(task_id, status="running", progress=pct_i, message=msg)
 
         report(5, "starting")
-        report(15, "loading model")
-        report(25, "generating")
-
-        res = generate_music(prompt=prompt, lyrics=lyrics, duration=duration, progress_cb=report)
+        
+        # Use ACE-Step API instead of local inference
+        try:
+            report(10, "calling ACE-Step API")
+            api_params = AceStepApiParams(
+                mode=mode,
+                sample_query=sample_query,
+                prompt=prompt,
+                lyrics=lyrics,
+                thinking=thinking,
+                audio_duration=audio_duration,
+                bpm=bpm,
+                vocal_language=vocal_language,
+                audio_format=audio_format,
+                inference_steps=inference_steps,
+                batch_size=batch_size,
+            )
+            audio_bytes = generate_music_via_api(api_params, progress_cb=report)
+            # API returns audio in the requested format (MP3, WAV, etc.)
+            # For MusicGenResult, we use wav_bytes field but it can contain any audio format
+            res_bpm = bpm if bpm else 120  # Use provided BPM or default
+            res = MusicGenResult(wav_bytes=audio_bytes, bpm=res_bpm)
+        except AceStepApiError as e:
+            print(f"[music_generation] ACE-Step API failed: {e}, falling back to local inference", flush=True)
+            # Fallback to local inference if API fails
+            if mode == "custom" and prompt:
+                report(15, "fallback: loading local model")
+                report(25, "fallback: generating")
+                res = generate_music(prompt=prompt, lyrics=lyrics, duration=audio_duration, progress_cb=report)
+            elif mode == "simple" and sample_query:
+                report(15, "fallback: loading local model")
+                report(25, "fallback: generating")
+                # Use sample_query as prompt for simple mode fallback
+                res = generate_music(prompt=sample_query, lyrics=None, duration=audio_duration, progress_cb=report)
+            else:
+                raise RuntimeError(f"Cannot fallback: mode={mode}, prompt={prompt}, sample_query={sample_query}") from e
 
         update_task(task_id, status="running", progress=60, message="uploading audio")
-        stored = get_storage().store_bytes(content=res.wav_bytes, suffix=".wav", content_type="audio/wav")
+        # Use the requested audio format for storage
+        suffix = f".{audio_format}"
+        content_type = f"audio/{audio_format}" if audio_format in ["mp3", "wav", "flac"] else "audio/mpeg"
+        stored = get_storage().store_bytes(content=res.wav_bytes, suffix=suffix, content_type=content_type)
 
         # Generate cover image
         cover_image_url = None
@@ -61,7 +108,9 @@ def run_generation_task(
         try:
             report(65, "generating cover image")
             print(f"[music_generation] Calling generate_cover_image...", flush=True)
-            cover_res = generate_cover_image(prompt=prompt, title=title, progress_cb=lambda p, m: report(65 + int(p * 0.15), m))
+            # Use appropriate prompt for cover image
+            cover_prompt = prompt if mode == "custom" else (sample_query or "Generated music")
+            cover_res = generate_cover_image(prompt=cover_prompt, title=title, progress_cb=lambda p, m: report(65 + int(p * 0.15), m))
             print(f"[music_generation] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
             report(80, "uploading cover image")
             cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
@@ -79,12 +128,14 @@ def run_generation_task(
 
         update_task(task_id, status="running", progress=90, message="saving")
         with Session(engine) as db:
+            # Use appropriate prompt for song record
+            song_prompt = prompt if mode == "custom" else (sample_query or "Generated")
             song = Song(
                 user_id=UUID(user_id),
                 title=title or "Generated",
-                prompt=prompt,
+                prompt=song_prompt,
                 lyrics=lyrics,
-                duration=duration,
+                duration=audio_duration,
                 bpm=res.bpm,
                 audio_url=stored.url,
                 cover_image_url=cover_image_url,

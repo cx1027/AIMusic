@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, API_BASE } from "../lib/api";
+import { API_BASE } from "../lib/api";
+import { authedHttp } from "../lib/http";
 import { getAccessToken } from "../lib/auth";
 import { resolveMediaUrl } from "../lib/media";
 import { ALL_GENRES, Genre, inferGenresFromPrompt } from "../lib/genres";
@@ -14,12 +15,23 @@ type GenState = {
 
 export default function Generate() {
   const token = getAccessToken();
+  const [mode, setMode] = useState<"simple" | "custom">("custom");
   const [title, setTitle] = useState("My new song");
   const [prompt, setPrompt] = useState("lofi chill beats, rainy night");
+  const [sampleQuery, setSampleQuery] = useState<string>("a soft acoustic guitar ballad for a quiet evening");
   const [genres, setGenres] = useState<Genre[]>(() => inferGenresFromPrompt("lofi chill beats, rainy night"));
   const [genresAuto, setGenresAuto] = useState<boolean>(true);
   const [lyrics, setLyrics] = useState<string>("");
-  const [duration, setDuration] = useState<number>(30);
+  
+  // Optional parameters
+  const [thinking, setThinking] = useState<boolean>(true);
+  const [audioDuration, setAudioDuration] = useState<number>(60);
+  const [bpm, setBpm] = useState<number | null>(120);
+  const [vocalLanguage, setVocalLanguage] = useState<string>("en");
+  const [audioFormat, setAudioFormat] = useState<string>("mp3");
+  const [inferenceSteps, setInferenceSteps] = useState<number>(8);
+  const [batchSize, setBatchSize] = useState<number>(1);
+  
   const [err, setErr] = useState<string | null>(null);
   const [state, setState] = useState<GenState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -63,6 +75,17 @@ export default function Generate() {
 
   async function start() {
     if (!token) return;
+    
+    // Validation
+    if (mode === "custom" && !prompt.trim()) {
+      setErr("Prompt is required for custom mode");
+      return;
+    }
+    if (mode === "simple" && !sampleQuery.trim()) {
+      setErr("Sample query is required for simple mode");
+      return;
+    }
+    
     setErr(null);
     setState(null);
     if (esRef.current) {
@@ -72,13 +95,34 @@ export default function Generate() {
     // Send all selected genres as comma-separated string, or null if none selected
     const genreString = genres.length > 0 ? genres.join(", ") : null;
     try {
-      const res = await api.generate(
-        prompt,
-        lyrics.trim() ? lyrics : null,
-        duration,
-        title.trim() ? title.trim() : null,
-        genreString
-      );
+      const payload: any = {
+        mode,
+        title: title.trim() ? title.trim() : null,
+        genre: genreString,
+        thinking,
+        audio_duration: audioDuration,
+        vocal_language: vocalLanguage,
+        audio_format: audioFormat,
+        inference_steps: inferenceSteps,
+        batch_size: batchSize,
+      };
+      
+      if (mode === "simple") {
+        payload.sample_query = sampleQuery.trim();
+      } else {
+        payload.prompt = prompt.trim();
+        payload.lyrics = lyrics.trim() ? lyrics.trim() : null;
+      }
+      
+      if (bpm !== null) {
+        payload.bpm = bpm;
+      }
+      
+      const res = await authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      
       const url = `${API_BASE}${res.events_url}?token=${encodeURIComponent(token)}`;
       // NOTE: backend uses Authorization header, but SSE can't set headers; we pass token via query and handle it server-side
       // if you don't want query tokens, switch to cookie auth.
@@ -108,12 +152,47 @@ export default function Generate() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Generate AI Song</h1>
-      <p className="mt-2 text-sm text-gray-300">Create your AI-generated song from a text prompt. Watch the magic happen as our AI brings your musical ideas to life.</p>
+      <p className="mt-2 text-sm text-gray-300">Create your AI-generated song using Simple Mode (AI generates everything) or Custom Mode (you provide caption and lyrics).</p>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
+          {/* Mode Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-200">Generation Mode</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("simple")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm transition-colors ${
+                  mode === "simple"
+                    ? "bg-white text-black"
+                    : "border border-white/20 bg-black/30 text-gray-300 hover:border-white/30"
+                }`}
+              >
+                Simple Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("custom")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm transition-colors ${
+                  mode === "custom"
+                    ? "bg-white text-black"
+                    : "border border-white/20 bg-black/30 text-gray-300 hover:border-white/30"
+                }`}
+              >
+                Custom Mode
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              {mode === "simple"
+                ? "AI generates caption, lyrics, and metadata from your description"
+                : "You provide caption and lyrics for full control"}
+            </p>
+          </div>
+
+          {/* Song name */}
           <div className="space-y-1">
             <label className="text-sm text-gray-200">Song name</label>
             <input
@@ -123,14 +202,47 @@ export default function Generate() {
               className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-sm text-gray-200">Prompt</label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-            />
-          </div>
+
+          {/* Mode-specific fields */}
+          {mode === "simple" ? (
+            <div className="space-y-1">
+              <label className="text-sm text-gray-200">
+                Sample Query <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={sampleQuery}
+                onChange={(e) => setSampleQuery(e.target.value)}
+                placeholder="e.g. a soft acoustic guitar ballad for a quiet evening"
+                className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+              />
+              <p className="text-xs text-gray-400">Natural language description - AI will generate everything else</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">
+                  Caption (Prompt) <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="e.g. Chinese hip-hop, melodic trap, male rapper with smooth R&B hooks, 808 bass, hi-hats"
+                  className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">Lyrics</label>
+                <textarea
+                  value={lyrics}
+                  onChange={(e) => setLyrics(e.target.value)}
+                  placeholder="Enter your lyrics here..."
+                  className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Genre tags */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-sm text-gray-200">Genre tags</label>
@@ -159,45 +271,135 @@ export default function Generate() {
               })}
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-sm text-gray-200">Lyrics (optional)</label>
-            <textarea
-              value={lyrics}
-              onChange={(e) => setLyrics(e.target.value)}
-              className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-            />
+
+          {/* Optional Parameters Section */}
+          <div className="space-y-3 border-t border-white/10 pt-3">
+            <div className="text-sm font-medium text-gray-200">Optional Parameters</div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">
+                  Audio Duration (s) <span className="text-gray-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={10}
+                  max={600}
+                  value={audioDuration}
+                  onChange={(e) => setAudioDuration(parseInt(e.target.value || "60", 10))}
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+                <p className="text-xs text-gray-400">10-600 seconds</p>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">BPM</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={bpm || ""}
+                  onChange={(e) => setBpm(e.target.value ? parseInt(e.target.value, 10) : null)}
+                  placeholder="Auto"
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">Vocal Language</label>
+                <select
+                  value={vocalLanguage}
+                  onChange={(e) => setVocalLanguage(e.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                >
+                  <option value="en">English</option>
+                  <option value="zh">Chinese</option>
+                  <option value="ja">Japanese</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                </select>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">Audio Format</label>
+                <select
+                  value={audioFormat}
+                  onChange={(e) => setAudioFormat(e.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                >
+                  <option value="mp3">MP3</option>
+                  <option value="wav">WAV</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">Inference Steps</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={inferenceSteps}
+                  onChange={(e) => setInferenceSteps(parseInt(e.target.value || "8", 10))}
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-sm text-gray-200">Batch Size</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(parseInt(e.target.value || "1", 10))}
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="thinking"
+                checked={thinking}
+                onChange={(e) => setThinking(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-black/30 text-white focus:ring-white/30"
+              />
+              <label htmlFor="thinking" className="text-sm text-gray-200 cursor-pointer">
+                Use 5Hz LM for enhanced quality (thinking)
+              </label>
+            </div>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm text-gray-200">Duration</label>
-            <input
-              type="number"
-              min={1}
-              max={300}
-              value={duration}
-              onChange={(e) => setDuration(parseInt(e.target.value || "30", 10))}
-              className="w-28 rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-            />
-          </div>
+
           {err ? <div className="text-sm text-red-300">{err}</div> : null}
-          <button className="w-full rounded-md bg-white px-3 py-2 text-black" onClick={start}>
+          <button className="w-full rounded-md bg-white px-3 py-2 text-black font-medium hover:bg-gray-100 transition-colors" onClick={start}>
             Generate AI Song
           </button>
         </div>
 
         <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
-          <div className="text-sm text-gray-300">Status</div>
+          <div className="text-sm font-medium text-gray-200">Status</div>
           {!state ? (
             <div className="text-gray-400">No task yet.</div>
           ) : (
             <>
-              <div className="flex items-center justify-between text-sm">
-                <div className="text-gray-200">{state.status}</div>
-                <div className="text-gray-300">{state.progress}%</div>
+              <div className="text-sm text-gray-200">
+                Status: <span className="font-semibold">{state.status}</span>
+              </div>
+              <div className="text-xs text-gray-300">
+                Progress: <span className="font-mono">{state.progress}%</span>
+                {state.message && !state.message.includes("ace-step-api") ? (
+                  <span className="ml-1">
+                    | {state.message}
+                  </span>
+                ) : null}
               </div>
               <div className="h-2 w-full overflow-hidden rounded bg-white/10">
                 <div className="h-2 bg-white" style={{ width: `${state.progress}%` }} />
               </div>
-              <div className="text-sm text-gray-300">{state.message}</div>
               <div className="space-y-1 pt-2">
                 <div className="text-sm text-gray-200">Genres</div>
                 <div className="flex flex-wrap gap-2">
