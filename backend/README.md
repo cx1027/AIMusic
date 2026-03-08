@@ -12,7 +12,25 @@ FastAPI + SQLModel + Celery backend for the AI Music app.
 
 ## Environment
 
-Copy `./.env.example` to `./.env` and adjust values.
+Copy `./env.example` to `./.env` and adjust values.
+
+## RunPod Serverless (Polling mode, no Celery)
+
+This repo supports an additional music generation flow that **does not use Celery**:
+
+- React `POST /api/music/generate`
+- FastAPI calls RunPod Serverless `POST https://api.runpod.ai/v2/{endpoint_id}/run`
+- Client polls `GET /api/music/status/{job_id}` until it returns `status=completed` with `result.output_url`
+
+Enable it via `.env`:
+
+- **`MUSIC_GENERATION_BACKEND=runpod`**
+- **`RUNPOD_API_KEY=...`**
+- **`RUNPOD_ENDPOINT_ID=...`**
+
+Frontend toggle (Vite env):
+
+- **`VITE_MUSIC_GEN_TRANSPORT=polling`** (default is `sse`)
 
 ##步骤 A：获取并安装到后端虚拟环境
 # 1. 进入后端项目目录

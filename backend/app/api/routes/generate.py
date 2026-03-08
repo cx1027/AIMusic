@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from typing import Any, AsyncGenerator, Dict, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from sse_starlette.sse import EventSourceResponse
 from sqlmodel import Session
 
@@ -33,6 +34,7 @@ class GenerateRequestPayload(Dict[str, Any]):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_generation(
+    background_tasks: BackgroundTasks,
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -162,23 +164,51 @@ def create_generation(
         },
     )
 
-    run_generation_task.delay(
-        task_id=task_id,
-        user_id=str(user.id),
-        title=title,
-        mode=mode,
-        prompt=prompt,
-        sample_query=sample_query,
-        lyrics=lyrics,
-        audio_duration=audio_duration_int,
-        thinking=thinking,
-        bpm=bpm_int,
-        vocal_language=vocal_language,
-        audio_format=audio_format,
-        inference_steps=inference_steps_int,
-        batch_size=batch_size_int,
-        genre=genre,
-    )
+    # Check if FLUXSCHNELL=RUNPOD, if so, use BackgroundTasks instead of Celery
+    flux_schnell = os.getenv("FLUXSCHNELL", "").strip().upper()
+    print(f"[generate] FLUXSCHNELL env var: '{flux_schnell}'", flush=True)
+    if flux_schnell == "RUNPOD":
+        # Use BackgroundTasks instead of Celery task
+        print(f"[generate] Using BackgroundTasks (RUNPOD mode) for task_id={task_id}", flush=True)
+        background_tasks.add_task(
+            run_generation_task,
+            task_id=task_id,
+            user_id=str(user.id),
+            title=title,
+            mode=mode,
+            prompt=prompt,
+            sample_query=sample_query,
+            lyrics=lyrics,
+            audio_duration=audio_duration_int,
+            thinking=thinking,
+            bpm=bpm_int,
+            vocal_language=vocal_language,
+            audio_format=audio_format,
+            inference_steps=inference_steps_int,
+            batch_size=batch_size_int,
+            genre=genre,
+        )
+        print(f"[generate] Background task added successfully", flush=True)
+    else:
+        # Use Celery task as before
+        print(f"[generate] Using Celery task for task_id={task_id}", flush=True)
+        run_generation_task.delay(
+            task_id=task_id,
+            user_id=str(user.id),
+            title=title,
+            mode=mode,
+            prompt=prompt,
+            sample_query=sample_query,
+            lyrics=lyrics,
+            audio_duration=audio_duration_int,
+            thinking=thinking,
+            bpm=bpm_int,
+            vocal_language=vocal_language,
+            audio_format=audio_format,
+            inference_steps=inference_steps_int,
+            batch_size=batch_size_int,
+            genre=genre,
+        )
 
     return {"task_id": task_id, "events_url": f"/api/generate/events/{task_id}"}
 

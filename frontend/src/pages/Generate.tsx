@@ -4,13 +4,14 @@ import { authedHttp } from "../lib/http";
 import { getAccessToken } from "../lib/auth";
 import { resolveMediaUrl } from "../lib/media";
 import { ALL_GENRES, Genre, inferGenresFromPrompt } from "../lib/genres";
+import { createMusicJob, getMusicJobStatus, MusicPollState } from "../api/music";
 
 type GenState = {
   task_id: string;
   status: "queued" | "running" | "completed" | "failed";
   progress: number;
   message?: string;
-  result?: { song_id?: string; audio_url?: string; cover_image_url?: string };
+  result?: { song_id?: string; audio_url?: string; cover_image_url?: string; output_url?: string | null; cover_image_error?: string };
 };
 
 export default function Generate() {
@@ -35,11 +36,19 @@ export default function Generate() {
   const [err, setErr] = useState<string | null>(null);
   const [state, setState] = useState<GenState | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const pollTimerRef = useRef<number | null>(null);
 
-  const audioUrl = useMemo(() => state?.result?.audio_url || null, [state]);
+  const audioUrl = useMemo(() => state?.result?.audio_url || state?.result?.output_url || null, [state]);
   const audioSrc = useMemo(() => resolveMediaUrl(audioUrl), [audioUrl]);
   const coverImageUrl = useMemo(() => state?.result?.cover_image_url || null, [state]);
   const coverImageSrc = useMemo(() => resolveMediaUrl(coverImageUrl), [coverImageUrl]);
+  const coverImageError = useMemo(() => {
+    const error = state?.result?.cover_image_error;
+    if (error) {
+      console.log("[Generate] Cover image error detected:", error);
+    }
+    return error || null;
+  }, [state]);
 
   // Debug logging
   useEffect(() => {
@@ -51,15 +60,31 @@ export default function Generate() {
         result: state.result,
         coverImageUrl: coverImageUrl,
         coverImageSrc: coverImageSrc,
+        coverImageError: coverImageError,
+        hasResult: !!state.result,
+        resultKeys: state.result ? Object.keys(state.result) : [],
       });
     }
-  }, [state, coverImageUrl, coverImageSrc]);
+  }, [state, coverImageUrl, coverImageSrc, coverImageError]);
 
   useEffect(() => {
     if (genresAuto) {
       setGenres(inferGenresFromPrompt(prompt));
     }
   }, [prompt, genresAuto]);
+
+  useEffect(() => {
+    return () => {
+      if (esRef.current) {
+        esRef.current.close();
+        esRef.current = null;
+      }
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, []);
 
   function toggleGenre(g: Genre) {
     setGenresAuto(false);
@@ -92,6 +117,10 @@ export default function Generate() {
       esRef.current.close();
       esRef.current = null;
     }
+    if (pollTimerRef.current) {
+      window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
     // Send all selected genres as comma-separated string, or null if none selected
     const genreString = genres.length > 0 ? genres.join(", ") : null;
     try {
@@ -117,35 +146,74 @@ export default function Generate() {
       if (bpm !== null) {
         payload.bpm = bpm;
       }
-      
-      const res = await authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      
-      const url = `${API_BASE}${res.events_url}?token=${encodeURIComponent(token)}`;
-      // NOTE: backend uses Authorization header, but SSE can't set headers; we pass token via query and handle it server-side
-      // if you don't want query tokens, switch to cookie auth.
-      const es = new EventSource(url);
-      esRef.current = es;
-      es.addEventListener("progress", (e: MessageEvent) => {
-        const next = JSON.parse(e.data) as GenState;
-        console.log("[Generate] SSE progress event:", {
-          status: next.status,
-          progress: next.progress,
-          message: next.message,
-          result: next.result,
+
+      const transport = (import.meta as any).env?.VITE_MUSIC_GEN_TRANSPORT || "sse"; // "sse" | "polling"
+      if (String(transport).toLowerCase() === "polling") {
+        const created = await createMusicJob(payload);
+        const jobId = created.job_id;
+        // Seed UI state
+        setState({
+          task_id: jobId,
+          status: "running",
+          progress: 5,
+          message: "queued",
+          result: { output_url: null },
         });
-        setState(next);
-        if (next.status === "completed" || next.status === "failed") {
-          console.log("[Generate] Task completed/failed, closing SSE connection");
-          es.close();
-          esRef.current = null;
-        }
-      });
-      es.addEventListener("error", () => {
-        setErr("SSE connection error");
-      });
+
+        const pollOnce = async () => {
+          const next = (await getMusicJobStatus(jobId)) as unknown as MusicPollState;
+          setState({
+            task_id: jobId,
+            status: (next.status as any) || "running",
+            progress: Number(next.progress ?? 0),
+            message: next.message,
+            result: { output_url: next.result?.output_url ?? null },
+          });
+          if (next.status === "completed" || next.status === "failed") {
+            if (pollTimerRef.current) {
+              window.clearInterval(pollTimerRef.current);
+              pollTimerRef.current = null;
+            }
+          }
+        };
+
+        await pollOnce();
+        pollTimerRef.current = window.setInterval(() => {
+          pollOnce().catch((e: any) => {
+            console.error("[Generate] Poll error:", e);
+          });
+        }, 2000);
+      } else {
+        const res = await authedHttp<{ task_id: string; events_url: string }>(`/api/generate`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        const url = `${API_BASE}${res.events_url}?token=${encodeURIComponent(token)}`;
+        // NOTE: backend uses Authorization header, but SSE can't set headers; we pass token via query and handle it server-side
+        // if you don't want query tokens, switch to cookie auth.
+        const es = new EventSource(url);
+        esRef.current = es;
+        es.addEventListener("progress", (e: MessageEvent) => {
+          const next = JSON.parse(e.data) as GenState;
+          console.log("[Generate] SSE progress event:", {
+            status: next.status,
+            progress: next.progress,
+            message: next.message,
+            result: next.result,
+            cover_image_error: next.result?.cover_image_error,
+          });
+          setState(next);
+          if (next.status === "completed" || next.status === "failed") {
+            console.log("[Generate] Task completed/failed, closing SSE connection");
+            es.close();
+            esRef.current = null;
+          }
+        });
+        es.addEventListener("error", () => {
+          setErr("SSE connection error");
+        });
+      }
     } catch (e: any) {
       setErr(e?.message || "Generate failed");
     }
@@ -440,7 +508,30 @@ export default function Generate() {
                 </div>
               ) : state.status === "completed" && !coverImageSrc ? (
                 <div className="text-sm text-yellow-300">
-                  Cover image not available (may not be generated or FLUX.1 Schnell not installed)
+                  {coverImageError ? (
+                    <div>
+                      <div className="font-semibold mb-1">Cover image generation failed:</div>
+                      <div className="text-xs text-yellow-200 whitespace-pre-wrap">{coverImageError}</div>
+                      <div className="mt-2 text-xs text-gray-400">
+                        The music was generated successfully, but the cover image could not be created.
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="font-semibold mb-1">Cover image not available</div>
+                      <div className="text-xs text-yellow-200">
+                        Cover image may not have been generated. This could be because:
+                        <ul className="list-disc list-inside mt-1 space-y-0.5">
+                          <li>FLUX.1 Schnell is not installed or configured</li>
+                          <li>If using Hugging Face: token is missing (set HUGGINGFACE_HUB_TOKEN)</li>
+                          <li>If using RunPod: endpoint is not configured (set FLUXSCHNELL=RUNPOD, FLUX_RUNPOD_ENDPOINT_ID, and RUNPOD_API_KEY)</li>
+                        </ul>
+                        <div className="mt-2 text-xs text-gray-400">
+                          Check backend logs for more details. The music was generated successfully.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
               {audioUrl ? (
