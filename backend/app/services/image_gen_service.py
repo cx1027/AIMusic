@@ -19,11 +19,165 @@ class ImageGenResult:
     image_bytes: bytes
 
 
+@dataclass
+class RunPodImageSubmitResult:
+    runpod_job_id: str
+    raw: dict
+
+
+@dataclass
+class RunPodImageStatusResult:
+    status: str  # IN_QUEUE | IN_PROGRESS | COMPLETED | FAILED | CANCELLED | TIMED_OUT | UNKNOWN
+    image_url: Optional[str]
+    raw: dict
+
+
 ProgressCb = Callable[[int, str], None]
 
 
 class FluxNotInstalledError(Exception):
     """Raised when FLUX.1 Schnell dependencies are not available."""
+
+
+def submit_runpod_image_job(*, prompt: str, title: str | None = None) -> RunPodImageSubmitResult:
+    """
+    Submit a RunPod image generation job and return the job ID.
+    This allows parallel execution - submit the job and poll separately.
+    """
+    settings = get_settings()
+    
+    # Get RunPod endpoint ID
+    endpoint_id = (
+        settings.flux_runpod_endpoint_id
+        or os.getenv('FLUX_RUNPOD_ENDPOINT_ID')
+    )
+    if not endpoint_id:
+        raise FluxNotInstalledError(
+            "RunPod endpoint ID is required for cover image generation.\n\n"
+            "To fix this:\n"
+            "1. Set FLUXSCHNELL=RUNPOD environment variable\n"
+            "2. Set FLUX_RUNPOD_ENDPOINT_ID environment variable\n"
+            "   OR set flux_runpod_endpoint_id in your .env file\n"
+            "3. Get your endpoint ID from RunPod console: Serverless -> your endpoint -> endpoint id"
+        )
+    
+    # Get RunPod API key
+    runpod_api_key = settings.runpod_api_key or os.getenv('RUNPOD_API_KEY')
+    if not runpod_api_key:
+        raise FluxNotInstalledError(
+            "RunPod API key is required for cover image generation.\n\n"
+            "To fix this:\n"
+            "1. Set RUNPOD_API_KEY environment variable\n"
+            "   OR set runpod_api_key in your .env file\n"
+            "2. Get your API key from RunPod console: Settings -> API Keys"
+        )
+    
+    # Enhance prompt for album cover style
+    enhanced_prompt = f"Album cover art, {prompt}"
+    if title:
+        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design"
+    else:
+        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design"
+    
+    logger.info(f"[image_gen_service] Submitting image job to RunPod: prompt='{enhanced_prompt[:100]}...'")
+    
+    # Submit job to RunPod
+    api_base_url = settings.runpod_api_base_url or "https://api.runpod.ai/v2"
+    submit_url = f"{api_base_url.rstrip('/')}/{endpoint_id}/run"
+    submit_payload = {"input": {"prompt": enhanced_prompt}}
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {runpod_api_key}",
+    }
+    
+    try:
+        with httpx.Client(timeout=float(settings.runpod_request_timeout_seconds or 30)) as client:
+            resp = client.post(submit_url, json=submit_payload, headers=headers)
+            resp.raise_for_status()
+            submit_data = resp.json()
+    except httpx.HTTPError as e:
+        raise FluxNotInstalledError(f"RunPod submit failed: {e}") from e
+    except Exception as e:
+        raise FluxNotInstalledError(f"RunPod submit failed: {type(e).__name__}: {e}") from e
+    
+    job_id = submit_data.get("id")
+    if not job_id:
+        raise FluxNotInstalledError(f"RunPod submit returned no job id: {submit_data}")
+    
+    logger.info(f"[image_gen_service] RunPod image job submitted: {job_id}")
+    return RunPodImageSubmitResult(runpod_job_id=str(job_id), raw=submit_data)
+
+
+def get_runpod_image_status(*, runpod_job_id: str) -> RunPodImageStatusResult:
+    """
+    Get the status of a RunPod image generation job.
+    Returns status and image_url if completed.
+    """
+    settings = get_settings()
+    
+    # Get RunPod endpoint ID
+    endpoint_id = (
+        settings.flux_runpod_endpoint_id
+        or os.getenv('FLUX_RUNPOD_ENDPOINT_ID')
+    )
+    if not endpoint_id:
+        raise FluxNotInstalledError("RunPod endpoint ID is required")
+    
+    # Get RunPod API key
+    runpod_api_key = settings.runpod_api_key or os.getenv('RUNPOD_API_KEY')
+    if not runpod_api_key:
+        raise FluxNotInstalledError("RunPod API key is required")
+    
+    api_base_url = settings.runpod_api_base_url or "https://api.runpod.ai/v2"
+    status_url = f"{api_base_url.rstrip('/')}/{endpoint_id}/status/{runpod_job_id}"
+    
+    try:
+        with httpx.Client(timeout=float(settings.runpod_request_timeout_seconds or 30)) as client:
+            resp = client.get(status_url, headers={"Authorization": f"Bearer {runpod_api_key}"})
+            resp.raise_for_status()
+            status_data = resp.json()
+    except httpx.HTTPError as e:
+        raise FluxNotInstalledError(f"RunPod status check failed: {e}") from e
+    except Exception as e:
+        raise FluxNotInstalledError(f"RunPod status check failed: {type(e).__name__}: {e}") from e
+    
+    status = str(status_data.get("status", "")).upper()
+    
+    # Extract image URL from output if completed
+    image_url = None
+    if status == "COMPLETED":
+        output = status_data.get("output", {})
+        if isinstance(output, dict):
+            image_url = output.get("image_url")
+            if image_url:
+                # Normalize URL: remove duplicate protocol prefixes
+                image_url = str(image_url).strip()
+                while image_url.startswith("https://https://"):
+                    image_url = image_url[8:]
+                while image_url.startswith("http://http://"):
+                    image_url = image_url[7:]
+                # Ensure URL has a protocol
+                if not image_url.startswith(("http://", "https://")):
+                    image_url = "https://" + image_url
+    
+    return RunPodImageStatusResult(status=status, image_url=image_url, raw=status_data)
+
+
+def download_image_from_url(image_url: str) -> bytes:
+    """
+    Download an image from a URL and return the bytes.
+    """
+    logger.info(f"[image_gen_service] Downloading image from: {image_url}")
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            img_resp = client.get(image_url)
+            img_resp.raise_for_status()
+            image_bytes = img_resp.content
+            logger.info(f"[image_gen_service] Image downloaded successfully ({len(image_bytes)} bytes)")
+            return image_bytes
+    except httpx.HTTPError as e:
+        raise FluxNotInstalledError(f"Failed to download image from {image_url}: {e}") from e
 
 
 def _generate_via_runpod(

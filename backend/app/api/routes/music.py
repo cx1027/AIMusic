@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
@@ -12,10 +13,12 @@ from app.core.config import get_settings
 from app.core.database import engine
 from app.models.song import Song
 from app.models.user import User
-from app.services.image_gen_service import FluxNotInstalledError, generate_cover_image
+from app.services.image_gen_service import FluxNotInstalledError, download_image_from_url, generate_cover_image, get_runpod_image_status, submit_runpod_image_job
 from app.services.progress_service import get_task, init_task, update_task
 from app.services.runpod_music_service import RunPodError, get_runpod_status, submit_runpod_job
 from app.services.storage_service import get_storage
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -132,10 +135,13 @@ def music_generate(
     #   { "input": { "prompt": "...", "duration": 10 } }
     # 并且会在远端生成 MP3 并上传到 R2。
     update_task(job_id, status="running", progress=5, message="runpod: submitting")
+    
+    # Prepare prompts
+    runpod_prompt = sample_query if mode == "simple" else prompt
+    cover_prompt = prompt if mode == "custom" else (sample_query or "Generated music")
+    
+    # Submit music generation job
     try:
-        # simple 模式用 sample_query，当作最终 prompt；
-        # custom 模式用 prompt。
-        runpod_prompt = sample_query if mode == "simple" else prompt
         runpod_input = {
             "prompt": runpod_prompt,
             "duration": audio_duration_int,
@@ -144,15 +150,41 @@ def music_generate(
     except RunPodError as e:
         update_task(job_id, status="failed", progress=100, message=str(e), result=None)
         raise HTTPException(status_code=502, detail=str(e))
+    
+    # Submit cover image generation job in parallel
+    cover_image_job_id = None
+    cover_image_error = None
+    try:
+        cover_submit_res = submit_runpod_image_job(prompt=cover_prompt, title=title)
+        cover_image_job_id = cover_submit_res.runpod_job_id
+        logger.info(f"[music_generate] Cover image job submitted: {cover_image_job_id}")
+    except FluxNotInstalledError as e:
+        # If FLUX is not available, we'll skip cover image generation
+        cover_image_error = str(e)
+        logger.warning(f"[music_generate] Cover image generation not available: {cover_image_error}")
+    except Exception as e:
+        # Log error but don't fail the whole request
+        cover_image_error = f"Failed to submit cover image job: {str(e)}"
+        logger.error(f"[music_generate] Error submitting cover image job: {e}", exc_info=True)
 
     update_task(
         job_id,
         status="running",
         progress=10,
         message="runpod: queued",
-        result={"runpod_job_id": submit_res.runpod_job_id, "output_url": None},
+        result={
+            "runpod_job_id": submit_res.runpod_job_id,
+            "runpod_image_job_id": cover_image_job_id,
+            "output_url": None,
+            "cover_image_url": None,
+            "cover_image_error": cover_image_error,
+        },
     )
-    return {"job_id": job_id, "runpod_job_id": submit_res.runpod_job_id}
+    return {
+        "job_id": job_id,
+        "runpod_job_id": submit_res.runpod_job_id,
+        "runpod_image_job_id": cover_image_job_id,
+    }
 
 
 def _finalize_runpod_job(
@@ -160,11 +192,12 @@ def _finalize_runpod_job(
     job_id: str,
     user_id: str,
     audio_url: str,
+    cover_image_url: Optional[str] = None,
     payload: Dict[str, Any],
 ) -> None:
     """
     Finalize a completed RunPod job by:
-    1. Generating cover image
+    1. Downloading cover image from RunPod (if provided) or generating it as fallback
     2. Creating Song record in database
     3. Updating task result with song_id and cover_image_url
     """
@@ -173,6 +206,7 @@ def _finalize_runpod_job(
     print(f"\n{'='*80}", flush=True)
     print(f"[music_status] FINALIZING JOB: job_id={job_id}", flush=True)
     print(f"[music_status] Audio URL: {audio_url}", flush=True)
+    print(f"[music_status] Cover Image URL: {cover_image_url or 'None (will generate)'}", flush=True)
     print(f"{'='*80}\n", flush=True)
     
     try:
@@ -193,27 +227,68 @@ def _finalize_runpod_job(
         print(f"[music_status] Cover prompt: '{cover_prompt[:100] if cover_prompt else 'N/A'}...'", flush=True)
         print(f"[music_status] Title: '{title}'", flush=True)
         
-        # Generate cover image
-        cover_image_url = None
+        # Use cover image URL directly from RunPod (already an R2 URL) or generate fallback
+        final_cover_image_url = None
         cover_image_error = None
-        try:
-            print(f"[music_status] ========== STARTING COVER IMAGE GENERATION ==========", flush=True)
-            print(f"[music_status] Calling generate_cover_image...", flush=True)
-            cover_res = generate_cover_image(prompt=cover_prompt, title=title)
-            print(f"[music_status] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
-            cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
-            cover_image_url = cover_stored.url
-            print(f"[music_status] Cover image uploaded: {cover_image_url}", flush=True)
-        except FluxNotInstalledError as e:
-            error_msg = str(e).strip() if str(e) else "FLUX.1 Schnell is not available or not properly configured"
-            print(f"[music_status] FLUX.1 Schnell not available, skipping cover image: {error_msg}", flush=True)
-            print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
-            cover_image_error = error_msg
-        except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}" if str(e) else f"{type(e).__name__}: Unknown error occurred"
-            print(f"[music_status] Error generating cover image: {error_msg}", flush=True)
-            print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
-            cover_image_error = error_msg
+        
+        if cover_image_url:
+            # Check if the URL is already a valid, accessible R2 URL
+            # RunPod returns R2 URLs that are already public and accessible
+            if cover_image_url.startswith(("http://", "https://")):
+                # Use the R2 URL directly - no need to download and re-upload
+                print(f"[music_status] ========== USING COVER IMAGE URL DIRECTLY FROM R2 ==========", flush=True)
+                print(f"[music_status] Using R2 URL: {cover_image_url}", flush=True)
+                final_cover_image_url = cover_image_url
+                print(f"[music_status] Cover image URL set: {final_cover_image_url}", flush=True)
+            else:
+                # Invalid URL format, try to download and re-upload
+                try:
+                    print(f"[music_status] ========== DOWNLOADING COVER IMAGE FROM RUNPOD ==========", flush=True)
+                    print(f"[music_status] Downloading from: {cover_image_url}", flush=True)
+                    image_bytes = download_image_from_url(cover_image_url)
+                    print(f"[music_status] Cover image downloaded successfully, size: {len(image_bytes)} bytes", flush=True)
+                    cover_stored = get_storage().store_bytes(content=image_bytes, suffix=".png", content_type="image/png")
+                    final_cover_image_url = cover_stored.url
+                    print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
+                except Exception as e:
+                    error_msg = f"Failed to download cover image: {type(e).__name__}: {str(e)}"
+                    print(f"[music_status] Error downloading cover image: {error_msg}", flush=True)
+                    print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
+                    cover_image_error = error_msg
+                    # Fallback to generating cover image
+                    print(f"[music_status] Falling back to generating cover image...", flush=True)
+                    try:
+                        cover_res = generate_cover_image(prompt=cover_prompt, title=title)
+                        print(f"[music_status] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
+                        cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+                        final_cover_image_url = cover_stored.url
+                        print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
+                        cover_image_error = None  # Clear error since fallback succeeded
+                    except Exception as e2:
+                        error_msg2 = f"{type(e2).__name__}: {str(e2)}" if str(e2) else f"{type(e2).__name__}: Unknown error occurred"
+                        print(f"[music_status] Error generating cover image (fallback): {error_msg2}", flush=True)
+                        print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
+                        cover_image_error = f"{cover_image_error}; fallback generation also failed: {error_msg2}"
+        else:
+            # Generate cover image (fallback if RunPod image generation was not available)
+            try:
+                print(f"[music_status] ========== GENERATING COVER IMAGE (FALLBACK) ==========", flush=True)
+                print(f"[music_status] Calling generate_cover_image...", flush=True)
+                cover_res = generate_cover_image(prompt=cover_prompt, title=title)
+                print(f"[music_status] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
+                cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+                final_cover_image_url = cover_stored.url
+                print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
+            except FluxNotInstalledError as e:
+                error_msg = str(e).strip() if str(e) else "FLUX.1 Schnell is not available or not properly configured"
+                print(f"[music_status] FLUX.1 Schnell not available, skipping cover image: {error_msg}", flush=True)
+                print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
+                cover_image_error = error_msg
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}" if str(e) else f"{type(e).__name__}: Unknown error occurred"
+                print(f"[music_status] Error generating cover image: {error_msg}", flush=True)
+                print(f"[music_status] Traceback: {traceback.format_exc()}", flush=True)
+                cover_image_error = error_msg
         
         # Create Song record
         print(f"[music_status] Creating Song record...", flush=True)
@@ -227,7 +302,7 @@ def _finalize_runpod_job(
                 duration=audio_duration,
                 bpm=bpm,
                 audio_url=audio_url,
-                cover_image_url=cover_image_url,
+                cover_image_url=final_cover_image_url,
                 genre=genre,
             )
             db.add(song)
@@ -243,13 +318,13 @@ def _finalize_runpod_job(
         result = {
             "song_id": song_id,
             "audio_url": audio_url,
-            "cover_image_url": cover_image_url,
+            "cover_image_url": final_cover_image_url,
         }
         if cover_image_error:
             result["cover_image_error"] = cover_image_error
             print(f"[music_status] Adding cover_image_error to result: {cover_image_error[:100]}...", flush=True)
         
-        print(f"[music_status] Final result before update_task: cover_image_url={cover_image_url}, result keys={list(result.keys())}", flush=True)
+        print(f"[music_status] Final result before update_task: cover_image_url={final_cover_image_url}, result keys={list(result.keys())}", flush=True)
         update_task(job_id, status="completed", progress=100, message="completed", result=result)
         print(f"[music_status] Task finalized successfully", flush=True)
         
@@ -315,10 +390,12 @@ def music_status(
         print(f"[music_status] Returning finalized state (fallback) - cover_image_url: {current_result.get('cover_image_url') if isinstance(current_result, dict) else 'N/A'}", flush=True)
         return state
 
-    # Extract runpod job id (only needed if not finalized)
+    # Extract runpod job ids (only needed if not finalized)
     runpod_job_id = None
+    runpod_image_job_id = None
     if isinstance(state.get("result"), dict):
         runpod_job_id = state["result"].get("runpod_job_id")
+        runpod_image_job_id = state["result"].get("runpod_image_job_id")
     if not runpod_job_id and isinstance(state.get("payload"), dict):
         runpod_job_id = state["payload"].get("runpod_job_id")
 
@@ -326,52 +403,183 @@ def music_status(
         update_task(job_id, status="failed", progress=100, message="missing runpod_job_id", result=None)
         raise HTTPException(status_code=500, detail="job state corrupted (missing runpod_job_id)")
 
+    # Poll music generation job
     try:
         st = get_runpod_status(runpod_job_id=str(runpod_job_id))
     except RunPodError as e:
         # Don't flip to failed on transient status fetch errors; just surface it.
         raise HTTPException(status_code=502, detail=str(e))
     
-    # Map RunPod status -> our status/progress
+    # Poll image generation job (if it exists)
+    image_status = None
+    image_url = None
+    if runpod_image_job_id:
+        try:
+            image_status = get_runpod_image_status(runpod_job_id=str(runpod_image_job_id))
+            if image_status.status == "COMPLETED" and image_status.image_url:
+                image_url = image_status.image_url
+                # Update result with image URL
+                current_result = state.get("result") or {}
+                if isinstance(current_result, dict):
+                    current_result["cover_image_url"] = image_url
+                    update_task(job_id, status=current_status or "running", progress=state.get("progress", 0), message=state.get("message", ""), result=current_result)
+        except FluxNotInstalledError as e:
+            logger.warning(f"[music_status] Error polling image job: {e}")
+        except Exception as e:
+            logger.warning(f"[music_status] Error polling image job: {e}", exc_info=True)
+    
+    # Map RunPod music status -> our status/progress
     rp_status = (st.status or "UNKNOWN").upper()
+    image_rp_status = (image_status.status if image_status else "UNKNOWN").upper() if runpod_image_job_id else None
+    
+    # Calculate overall progress based on both jobs
+    music_progress = 0
+    image_progress = 0
+    if rp_status in ("COMPLETED", "SUCCEEDED", "SUCCESS"):
+        music_progress = 100
+    elif rp_status in ("IN_PROGRESS", "RUNNING", "EXECUTING"):
+        music_progress = 60
+    elif rp_status in ("IN_QUEUE", "QUEUED"):
+        music_progress = 25
+    else:
+        music_progress = 30
+    
+    if runpod_image_job_id:
+        if image_rp_status in ("COMPLETED", "SUCCEEDED", "SUCCESS"):
+            image_progress = 100
+        elif image_rp_status in ("IN_PROGRESS", "RUNNING", "EXECUTING"):
+            image_progress = 60
+        elif image_rp_status in ("IN_QUEUE", "QUEUED"):
+            image_progress = 25
+        else:
+            image_progress = 30
+        
+        # Overall progress is average of both (weighted: music 70%, image 30%)
+        overall_progress = int((music_progress * 0.7) + (image_progress * 0.3))
+    else:
+        overall_progress = music_progress
+    
+    # Determine status message
     if rp_status in ("COMPLETED", "SUCCEEDED", "SUCCESS"):
         if not st.output_url:
-            update_task(job_id, status="failed", progress=100, message="runpod: completed but missing output_url", result={"runpod_job_id": runpod_job_id, "output_url": None})
+            update_task(job_id, status="failed", progress=100, message="runpod: completed but missing output_url", result={"runpod_job_id": runpod_job_id, "runpod_image_job_id": runpod_image_job_id, "output_url": None})
         else:
-            # Check if we're already finalizing (status is "running" with message "finalizing")
-            if current_status == "running" and state.get("message") == "finalizing":
-                # Already finalizing, just return current state
-                return state
-            
-            # Check if we've already finalized (has song_id)
-            if isinstance(current_result, dict) and current_result.get("song_id"):
-                # Already finalized, mark as completed and return updated state
-                update_task(job_id, status="completed", progress=100, message="completed", result=current_result)
-                refreshed = get_task(job_id)
-                return refreshed or state
-            
-            # Start finalization
-            print(f"[music_status] Starting finalization for job_id={job_id}", flush=True)
-            update_task(job_id, status="running", progress=90, message="finalizing", result={"runpod_job_id": runpod_job_id, "output_url": st.output_url})
-            
-            # Finalize job in background (generate cover image, create Song record)
-            payload = state.get("payload") or {}
-            background_tasks.add_task(
-                _finalize_runpod_job,
-                job_id=job_id,
-                user_id=str(state.get("user_id")),
-                audio_url=st.output_url,
-                payload=payload,
+            # Check if both jobs are complete
+            both_complete = (
+                rp_status in ("COMPLETED", "SUCCEEDED", "SUCCESS") and
+                (not runpod_image_job_id or image_rp_status in ("COMPLETED", "SUCCEEDED", "SUCCESS"))
             )
-            print(f"[music_status] Background task added for finalization: job_id={job_id}", flush=True)
+            
+            if both_complete:
+                # Check if we're already finalizing (status is "running" with message "finalizing")
+                if current_status == "running" and state.get("message") == "finalizing":
+                    # Already finalizing, just return current state
+                    return state
+                
+                # Check if we've already finalized (has song_id)
+                if isinstance(current_result, dict) and current_result.get("song_id"):
+                    # Already finalized, mark as completed and return updated state
+                    update_task(job_id, status="completed", progress=100, message="completed", result=current_result)
+                    refreshed = get_task(job_id)
+                    return refreshed or state
+                
+                # Start finalization
+                logger.info(f"[music_status] Starting finalization for job_id={job_id}")
+                update_task(
+                    job_id,
+                    status="running",
+                    progress=90,
+                    message="finalizing",
+                    result={
+                        "runpod_job_id": runpod_job_id,
+                        "runpod_image_job_id": runpod_image_job_id,
+                        "output_url": st.output_url,
+                        "cover_image_url": image_url,
+                    },
+                )
+                
+                # Finalize job in background (download cover image, create Song record)
+                payload = state.get("payload") or {}
+                background_tasks.add_task(
+                    _finalize_runpod_job,
+                    job_id=job_id,
+                    user_id=str(state.get("user_id")),
+                    audio_url=st.output_url,
+                    cover_image_url=image_url,
+                    payload=payload,
+                )
+                logger.info(f"[music_status] Background task added for finalization: job_id={job_id}")
+            else:
+                # Music complete but image still processing
+                status_msg = "runpod: music complete, generating cover"
+                update_task(
+                    job_id,
+                    status="running",
+                    progress=overall_progress,
+                    message=status_msg,
+                    result={
+                        "runpod_job_id": runpod_job_id,
+                        "runpod_image_job_id": runpod_image_job_id,
+                        "output_url": st.output_url,
+                        "cover_image_url": image_url,
+                    },
+                )
     elif rp_status in ("FAILED", "CANCELLED", "TIMED_OUT"):
-        update_task(job_id, status="failed", progress=100, message=f"runpod: {rp_status.lower()}", result={"runpod_job_id": runpod_job_id, "output_url": None})
+        update_task(
+            job_id,
+            status="failed",
+            progress=100,
+            message=f"runpod: {rp_status.lower()}",
+            result={"runpod_job_id": runpod_job_id, "runpod_image_job_id": runpod_image_job_id, "output_url": None},
+        )
     elif rp_status in ("IN_PROGRESS", "RUNNING", "EXECUTING"):
-        update_task(job_id, status="running", progress=60, message="runpod: generating", result={"runpod_job_id": runpod_job_id, "output_url": None})
+        status_msg = "runpod: generating music"
+        if runpod_image_job_id:
+            if image_rp_status in ("IN_PROGRESS", "RUNNING", "EXECUTING"):
+                status_msg = "runpod: generating music and cover"
+            elif image_rp_status in ("IN_QUEUE", "QUEUED"):
+                status_msg = "runpod: generating music, cover queued"
+        update_task(
+            job_id,
+            status="running",
+            progress=overall_progress,
+            message=status_msg,
+            result={
+                "runpod_job_id": runpod_job_id,
+                "runpod_image_job_id": runpod_image_job_id,
+                "output_url": None,
+                "cover_image_url": image_url,
+            },
+        )
     elif rp_status in ("IN_QUEUE", "QUEUED"):
-        update_task(job_id, status="running", progress=25, message="runpod: queued", result={"runpod_job_id": runpod_job_id, "output_url": None})
+        status_msg = "runpod: queued"
+        if runpod_image_job_id:
+            status_msg = "runpod: music and cover queued"
+        update_task(
+            job_id,
+            status="running",
+            progress=overall_progress,
+            message=status_msg,
+            result={
+                "runpod_job_id": runpod_job_id,
+                "runpod_image_job_id": runpod_image_job_id,
+                "output_url": None,
+                "cover_image_url": image_url,
+            },
+        )
     else:
-        update_task(job_id, status="running", progress=30, message=f"runpod: {rp_status.lower()}", result={"runpod_job_id": runpod_job_id, "output_url": None})
+        update_task(
+            job_id,
+            status="running",
+            progress=overall_progress,
+            message=f"runpod: {rp_status.lower()}",
+            result={
+                "runpod_job_id": runpod_job_id,
+                "runpod_image_job_id": runpod_image_job_id,
+                "output_url": None,
+                "cover_image_url": image_url,
+            },
+        )
 
     # Return the updated state
     try:

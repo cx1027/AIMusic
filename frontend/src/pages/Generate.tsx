@@ -157,7 +157,7 @@ export default function Generate() {
           status: "running",
           progress: 5,
           message: "queued",
-          result: { output_url: null },
+          result: null,
         });
 
         const pollOnce = async () => {
@@ -167,7 +167,7 @@ export default function Generate() {
             status: (next.status as any) || "running",
             progress: Number(next.progress ?? 0),
             message: next.message,
-            result: { output_url: next.result?.output_url ?? null },
+            result: next.result || null,
           });
           if (next.status === "completed" || next.status === "failed") {
             if (pollTimerRef.current) {
@@ -506,7 +506,7 @@ export default function Generate() {
                     />
                   </div>
                 </div>
-              ) : state.status === "completed" && !coverImageSrc ? (
+              ) : state.status === "completed" && !coverImageSrc && !coverImageUrl ? (
                 <div className="text-sm text-yellow-300">
                   {coverImageError ? (
                     <div>
@@ -538,6 +538,18 @@ export default function Generate() {
                 <div className="space-y-2">
                   <div className="text-sm text-gray-200">Audio</div>
                   <audio controls className="w-full" src={audioSrc ?? undefined} />
+                </div>
+              ) : state.status === "completed" && !audioUrl ? (
+                <div className="text-sm text-yellow-300">
+                  <div className="font-semibold mb-1">Audio not available</div>
+                  <div className="text-xs text-yellow-200">
+                    The audio file may not have been generated or uploaded successfully.
+                    {state.result?.output_url && (
+                      <div className="mt-1 text-xs text-gray-400">
+                        Output URL: {state.result.output_url}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : null}
             </>
