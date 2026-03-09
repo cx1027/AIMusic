@@ -75,9 +75,9 @@ def submit_runpod_image_job(*, prompt: str, title: str | None = None) -> RunPodI
     # Enhance prompt for album cover style
     enhanced_prompt = f"Album cover art, {prompt}"
     if title:
-        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     else:
-        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     
     logger.info(f"[image_gen_service] Submitting image job to RunPod: prompt='{enhanced_prompt[:100]}...'")
     
@@ -223,9 +223,9 @@ def _generate_via_runpod(
     # Enhance prompt for album cover style
     enhanced_prompt = f"Album cover art, {prompt}"
     if title:
-        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     else:
-        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     
     logger.info(f"[image_gen_service] Generating image via RunPod: prompt='{enhanced_prompt[:100]}...'")
     logger.info(f"[image_gen_service] RunPod endpoint_id: {endpoint_id}")
@@ -404,9 +404,9 @@ def _generate_via_huggingface(
     # Enhance prompt for album cover style
     enhanced_prompt = f"Album cover art, {prompt}"
     if title:
-        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art for '{title}', {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     else:
-        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design"
+        enhanced_prompt = f"Album cover art, {prompt}, professional music artwork, vibrant colors, artistic design, no text, no words, no letters, no typography, textless"
     
     logger.info(f"[image_gen_service] Generating image with prompt: '{enhanced_prompt[:100]}...'")
     
