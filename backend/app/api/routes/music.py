@@ -91,8 +91,8 @@ def music_generate(
         sample_query = (payload.get("sample_query") or "").strip()
         if not sample_query:
             raise HTTPException(status_code=400, detail="sample_query is required for simple mode")
-        prompt = None
-        caption = None
+        prompt = ""
+        caption = ""
         lyrics = None
     else:
         caption = (payload.get("caption") or "").strip()
@@ -105,6 +105,7 @@ def music_generate(
         lyrics = str(lyrics_raw).strip() if lyrics_raw is not None else ""
         if not lyrics:
             raise HTTPException(status_code=400, detail="lyrics is required for custom mode")
+        prompt = caption  # payload uses "prompt" for internal/finalize; custom mode = caption
         sample_query = None
 
     # Optional fields (pass-through to RunPod input)
