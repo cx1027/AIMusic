@@ -105,7 +105,6 @@ def music_generate(
         lyrics = str(lyrics_raw).strip() if lyrics_raw is not None else ""
         if not lyrics:
             raise HTTPException(status_code=400, detail="lyrics is required for custom mode")
-        prompt = caption  # payload uses "prompt" for internal/finalize; custom mode = caption
         sample_query = None
 
     # Optional fields (pass-through to RunPod input)
