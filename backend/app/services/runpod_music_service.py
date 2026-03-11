@@ -52,6 +52,18 @@ def submit_runpod_job(*, input_payload: Dict[str, Any]) -> RunPodSubmitResult:
     body = {"input": input_payload}
 
     logger.info("[runpod] submit job -> %s", url)
+    # Helpful for debugging RunPod-side input validation/runtime issues.
+    # Truncate large prompt/lyrics fields to keep logs readable.
+    try:
+        safe_input = dict(input_payload)
+        for k in ("prompt", "caption", "sample_query", "lyrics"):
+            if k in safe_input and safe_input[k] is not None:
+                s_val = str(safe_input[k])
+                if len(s_val) > 240:
+                    safe_input[k] = s_val[:240] + "...(truncated)"
+        logger.info("[runpod] submit body.input = %s", safe_input)
+    except Exception:
+        logger.info("[runpod] submit body.input = <unloggable payload>")
     try:
         with httpx.Client(timeout=float(s.runpod_request_timeout_seconds or 30)) as client:
             resp = client.post(url, json=body, headers={"Content-Type": "application/json", **_auth_headers()})

@@ -23,6 +23,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _coerce_int(value: Any, *, default: int) -> int:
+    """Coerce value to int; return default on None/invalid."""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _coerce_float(value: Any, *, default: float) -> float:
+    """Coerce value to float; return default on None/invalid."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _coerce_str(value: Any, *, default: str) -> str:
+    """Coerce value to str; return default on None/blank."""
+    if value is None:
+        return default
+    s = str(value).strip()
+    return s if s else default
+
+
+def _log_runpod_input(*, mode: str, runpod_input: Dict[str, Any]) -> None:
+    """Log the RunPod 'input' payload (truncate long text fields)."""
+    safe = dict(runpod_input)
+    for k in ("prompt", "caption", "sample_query", "lyrics"):
+        if k in safe and safe[k] is not None:
+            s = str(safe[k])
+            if len(s) > 240:
+                safe[k] = s[:240] + "...(truncated)"
+    logger.info("[runpod] final input payload (mode=%s): %s", mode, safe)
+
+
 def _require_runpod_enabled() -> None:
     s = get_settings()
     if (s.music_generation_backend or "celery").lower() != "runpod":
@@ -53,20 +92,26 @@ def music_generate(
         if not sample_query:
             raise HTTPException(status_code=400, detail="sample_query is required for simple mode")
         prompt = None
+        caption = None
         lyrics = None
     else:
-        prompt = (payload.get("prompt") or "").strip()
-        if not prompt:
-            raise HTTPException(status_code=400, detail="prompt is required for custom mode")
-        lyrics = payload.get("lyrics")
-        if lyrics is not None:
-            lyrics = str(lyrics).strip() if lyrics else None
+        caption = (payload.get("caption") or "").strip()
+        if not caption:
+            # Back-compat with older clients
+            caption = (payload.get("prompt") or "").strip()
+        if not caption:
+            raise HTTPException(status_code=400, detail="caption is required for custom mode")
+        lyrics_raw = payload.get("lyrics")
+        lyrics = str(lyrics_raw).strip() if lyrics_raw is not None else ""
+        if not lyrics:
+            raise HTTPException(status_code=400, detail="lyrics is required for custom mode")
         sample_query = None
 
     # Optional fields (pass-through to RunPod input)
     title = payload.get("title")
     genre = payload.get("genre")
     thinking = bool(payload.get("thinking", True))
+    instrumental = bool(payload.get("instrumental", False))
     # Support both `audio_duration` (frontend) and `duration` (common RunPod examples)
     audio_duration = payload.get("audio_duration", payload.get("duration", 60))
     try:
@@ -77,16 +122,8 @@ def music_generate(
         raise HTTPException(status_code=400, detail="audio_duration out of range (10-600)")
 
     bpm = payload.get("bpm")
-    bpm_int: Optional[int]
-    if bpm is not None:
-        try:
-            bpm_int = int(bpm)
-            if bpm_int <= 0:
-                bpm_int = None
-        except Exception:
-            bpm_int = None
-    else:
-        bpm_int = None
+    bpm_int_raw = _coerce_int(bpm, default=140)
+    bpm_int = bpm_int_raw if bpm_int_raw > 0 else 140
 
     vocal_language = str(payload.get("vocal_language", "en") or "en")
     audio_format = str(payload.get("audio_format", "mp3") or "mp3")
@@ -100,6 +137,16 @@ def music_generate(
         batch_size_int = max(1, int(batch_size))
     except Exception:
         batch_size_int = 1
+
+    # Mandatory RunPod fields per RunPod_JSON_Inputs.md (ensure no None leaks)
+    keyscale = _coerce_str(payload.get("keyscale"), default="A minor")
+    timesignature = _coerce_str(payload.get("timesignature"), default="4/4")
+    lm_temperature = _coerce_float(payload.get("lm_temperature"), default=0.85)
+    lm_top_p = _coerce_float(payload.get("lm_top_p"), default=0.9)
+    lm_top_k = _coerce_int(payload.get("lm_top_k"), default=50)
+    lm_cfg_scale = _coerce_float(payload.get("lm_cfg_scale"), default=2.5)
+    guidance_scale = _coerce_float(payload.get("guidance_scale"), default=7.0)
+    seed = _coerce_int(payload.get("seed"), default=42)
 
     # Credits gate: keep consistent with existing generate.py (2 credits)
     if user.credits_balance < 2:
@@ -117,35 +164,76 @@ def music_generate(
             "title": title,
             "genre": genre,
             "mode": mode,
+            "caption": caption,
             "prompt": prompt,
             "sample_query": sample_query,
             "lyrics": lyrics,
             "thinking": thinking,
+            "instrumental": instrumental,
             "audio_duration": audio_duration_int,
             "bpm": bpm_int,
+            "keyscale": keyscale,
+            "timesignature": timesignature,
             "vocal_language": vocal_language,
             "audio_format": audio_format,
+            "lm_temperature": lm_temperature,
+            "lm_top_p": lm_top_p,
+            "lm_top_k": lm_top_k,
+            "lm_cfg_scale": lm_cfg_scale,
             "inference_steps": inference_steps_int,
+            "guidance_scale": guidance_scale,
+            "seed": seed,
             "batch_size": batch_size_int,
         },
     )
 
     # Submit到 RunPod Serverless。
-    # 你的 RunPod endpoint 只需要：
-    #   { "input": { "prompt": "...", "duration": 10 } }
-    # 并且会在远端生成 MP3 并上传到 R2。
+    # RunPod Job input 需遵循 Runpod_API_DOC.md：
+    # - Simple Mode（前端的 Simple）：我们用 sample_query 触发 sample_query 模式（LLM 自动推理 caption/lyrics/metas）
+    # - Custom Mode（前端的 Custom）：mode="custom" + prompt + lyrics（本项目允许 lyrics 可选；缺省则用 [Instrumental]）
     update_task(job_id, status="running", progress=5, message="runpod: submitting")
     
-    # Prepare prompts
-    runpod_prompt = sample_query if mode == "simple" else prompt
-    cover_prompt = prompt if mode == "custom" else (sample_query or "Generated music")
+    # Prepare prompts (used for cover generation)
+    cover_prompt = caption if mode == "custom" else (sample_query or "Generated music")
     
     # Submit music generation job
     try:
-        runpod_input = {
-            "prompt": runpod_prompt,
-            "duration": audio_duration_int,
-        }
+        # Build RunPod input according to RunPod_JSON_Inputs.md
+        runpod_input: Dict[str, Any] = {}
+
+        # Common mandatory fields per RunPod_JSON_Inputs.md
+        runpod_input["duration"] = audio_duration_int
+        runpod_input["thinking"] = thinking
+        runpod_input["vocal_language"] = vocal_language
+        runpod_input["audio_format"] = audio_format
+        runpod_input["bpm"] = bpm_int
+        runpod_input["keyscale"] = keyscale
+        runpod_input["timesignature"] = timesignature
+        runpod_input["lm_temperature"] = lm_temperature
+        runpod_input["lm_top_p"] = lm_top_p
+        runpod_input["lm_top_k"] = lm_top_k
+        runpod_input["lm_cfg_scale"] = lm_cfg_scale
+        runpod_input["inference_steps"] = inference_steps_int
+        runpod_input["guidance_scale"] = guidance_scale
+        runpod_input["seed"] = seed
+        runpod_input["batch_size"] = batch_size_int
+
+        if mode == "simple":
+            if instrumental:
+                # Simple UI + instrumental => RunPod JSON "simple mode"
+                runpod_input["mode"] = "simple"
+                runpod_input["prompt"] = sample_query
+                runpod_input["lyrics"] = "[Instrumental]"
+            else:
+                # Simple UI => RunPod JSON "sample_query mode"
+                runpod_input["sample_query"] = sample_query
+        else:
+            # Frontend Custom Mode => RunPod JSON "custom mode"
+            runpod_input["mode"] = "custom"
+            runpod_input["caption"] = caption
+            runpod_input["lyrics"] = lyrics
+
+        _log_runpod_input(mode=mode, runpod_input=runpod_input)
         submit_res = submit_runpod_job(input_payload=runpod_input)
     except RunPodError as e:
         update_task(job_id, status="failed", progress=100, message=str(e), result=None)

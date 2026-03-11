@@ -61,20 +61,28 @@ def create_generation(
         if not sample_query:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="sample_query is required for simple mode")
         prompt = None
+        caption = None
         lyrics = None
     else:  # custom mode
-        prompt = (payload.get("prompt") or "").strip()
-        if not prompt:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="prompt is required for custom mode")
-        lyrics = payload.get("lyrics")
-        if lyrics is not None:
-            lyrics = str(lyrics).strip() if lyrics else None
+        caption = (payload.get("caption") or "").strip()
+        if not caption:
+            # Back-compat for older clients
+            caption = (payload.get("prompt") or "").strip()
+        if not caption:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="caption is required for custom mode")
+        lyrics_raw = payload.get("lyrics")
+        lyrics = str(lyrics_raw).strip() if lyrics_raw is not None else ""
+        if not lyrics:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="lyrics is required for custom mode")
+        prompt = caption  # internal name used by Celery task + API adapter
         sample_query = None
 
     # Optional parameters with defaults
     thinking = payload.get("thinking", True)
     if not isinstance(thinking, bool):
         thinking = True
+    
+    instrumental = bool(payload.get("instrumental", False))
 
     audio_duration = payload.get("audio_duration", 60)
     try:
@@ -150,11 +158,13 @@ def create_generation(
         payload={
             "title": title,
             "mode": mode,
+            "caption": caption,
             "prompt": prompt,
             "sample_query": sample_query,
             "lyrics": lyrics,
             "audio_duration": audio_duration_int,
             "thinking": thinking,
+            "instrumental": instrumental,
             "bpm": bpm_int,
             "vocal_language": vocal_language,
             "audio_format": audio_format,
@@ -176,6 +186,7 @@ def create_generation(
             user_id=str(user.id),
             title=title,
             mode=mode,
+            caption=caption,
             prompt=prompt,
             sample_query=sample_query,
             lyrics=lyrics,
@@ -187,6 +198,7 @@ def create_generation(
             inference_steps=inference_steps_int,
             batch_size=batch_size_int,
             genre=genre,
+            instrumental=instrumental,
         )
         print(f"[generate] Background task added successfully", flush=True)
     else:
@@ -197,6 +209,7 @@ def create_generation(
             user_id=str(user.id),
             title=title,
             mode=mode,
+            caption=caption,
             prompt=prompt,
             sample_query=sample_query,
             lyrics=lyrics,
@@ -208,6 +221,7 @@ def create_generation(
             inference_steps=inference_steps_int,
             batch_size=batch_size_int,
             genre=genre,
+            instrumental=instrumental,
         )
 
     return {"task_id": task_id, "events_url": f"/api/generate/events/{task_id}"}

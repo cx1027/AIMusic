@@ -91,9 +91,10 @@ def test_generate_success(client: TestClient, test_user: tuple[User, str]):
         response = client.post(
             "/api/generate",
             json={
-                "prompt": "A happy upbeat song",
-                "duration": 30,
-                "lyrics": None,
+                "mode": "custom",
+                "caption": "A happy upbeat song",
+                "lyrics": "These are some test lyrics",
+                "audio_duration": 30,
                 "genre": "Pop",
             },
             headers={"Authorization": f"Bearer {token}"}
@@ -112,9 +113,10 @@ def test_generate_success(client: TestClient, test_user: tuple[User, str]):
         call_kwargs = mock_task.delay.call_args.kwargs
         assert "task_id" in call_kwargs
         assert call_kwargs["user_id"] == str(user.id)
+        assert call_kwargs["caption"] == "A happy upbeat song"
         assert call_kwargs["prompt"] == "A happy upbeat song"
-        assert call_kwargs["duration"] == 30
-        assert call_kwargs["lyrics"] is None
+        assert call_kwargs["audio_duration"] == 30
+        assert call_kwargs["lyrics"] == "These are some test lyrics"
         assert call_kwargs["genre"] == "Pop"
 
 
@@ -137,9 +139,10 @@ def test_generate_with_lyrics(client: TestClient, test_user: tuple[User, str]):
         response = client.post(
             "/api/generate",
             json={
-                "prompt": "A sad ballad",
-                "duration": 60,
-                "lyrics": "These are some test lyrics"
+                "mode": "custom",
+                "caption": "A sad ballad",
+                "lyrics": "These are some test lyrics",
+                "audio_duration": 60,
             },
             headers={"Authorization": f"Bearer {token}"}
         )
@@ -160,13 +163,15 @@ def test_generate_missing_prompt(client: TestClient, test_user: tuple[User, str]
     response = client.post(
         "/api/generate",
         json={
-            "duration": 30
+            "mode": "custom",
+            "audio_duration": 30,
+            "lyrics": "x",
         },
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 400
-    assert "prompt is required" in response.json()["detail"]
+    assert "caption is required" in response.json()["detail"]
 
 
 def test_generate_empty_prompt(client: TestClient, test_user: tuple[User, str]):
@@ -176,14 +181,16 @@ def test_generate_empty_prompt(client: TestClient, test_user: tuple[User, str]):
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "   ",
-            "duration": 30
+            "mode": "custom",
+            "caption": "   ",
+            "lyrics": "x",
+            "audio_duration": 30,
         },
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 400
-    assert "prompt is required" in response.json()["detail"]
+    assert "caption is required" in response.json()["detail"]
 
 
 def test_generate_invalid_duration_string(client: TestClient, test_user: tuple[User, str]):
@@ -193,14 +200,16 @@ def test_generate_invalid_duration_string(client: TestClient, test_user: tuple[U
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": "not-a-number"
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": "not-a-number",
         },
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 400
-    assert "duration must be an integer" in response.json()["detail"]
+    assert "audio_duration must be an integer" in response.json()["detail"]
 
 
 def test_generate_duration_too_low(client: TestClient, test_user: tuple[User, str]):
@@ -210,14 +219,16 @@ def test_generate_duration_too_low(client: TestClient, test_user: tuple[User, st
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": 0
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": 0,
         },
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 400
-    assert "duration out of range" in response.json()["detail"]
+    assert "audio_duration out of range" in response.json()["detail"]
 
 
 def test_generate_duration_too_high(client: TestClient, test_user: tuple[User, str]):
@@ -227,14 +238,16 @@ def test_generate_duration_too_high(client: TestClient, test_user: tuple[User, s
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": 301
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": 601,
         },
         headers={"Authorization": f"Bearer {token}"}
     )
     
     assert response.status_code == 400
-    assert "duration out of range" in response.json()["detail"]
+    assert "audio_duration out of range" in response.json()["detail"]
 
 
 def test_generate_default_duration(client: TestClient, test_user: tuple[User, str]):
@@ -256,15 +269,17 @@ def test_generate_default_duration(client: TestClient, test_user: tuple[User, st
         response = client.post(
             "/api/generate",
             json={
-                "prompt": "Test song"
+                "mode": "custom",
+                "caption": "Test song",
+                "lyrics": "x",
             },
             headers={"Authorization": f"Bearer {token}"}
         )
         
         assert response.status_code == 201
-        # Verify default duration of 30 was used
+        # Verify default duration of 60 was used
         call_kwargs = mock_task.delay.call_args.kwargs
-        assert call_kwargs["duration"] == 30
+        assert call_kwargs["audio_duration"] == 60
 
 
 def test_generate_insufficient_credits(client: TestClient, test_user: tuple[User, str]):
@@ -281,8 +296,10 @@ def test_generate_insufficient_credits(client: TestClient, test_user: tuple[User
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": 30
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": 30,
         },
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -312,8 +329,10 @@ def test_generate_credits_deducted(client: TestClient, test_user: tuple[User, st
         response = client.post(
             "/api/generate",
             json={
-                "prompt": "Test song",
-                "duration": 30
+                "mode": "custom",
+                "caption": "Test song",
+                "lyrics": "x",
+                "audio_duration": 30,
             },
             headers={"Authorization": f"Bearer {token}"}
         )
@@ -323,7 +342,7 @@ def test_generate_credits_deducted(client: TestClient, test_user: tuple[User, st
         # Verify credits were deducted
         with Session(engine) as session:
             user = session.get(User, user_id)
-            assert user.credits_balance == initial_credits - 1
+            assert user.credits_balance == initial_credits - 2
 
 
 def test_generate_requires_authentication(client: TestClient):
@@ -331,8 +350,10 @@ def test_generate_requires_authentication(client: TestClient):
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": 30
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": 30,
         }
     )
     
@@ -344,8 +365,10 @@ def test_generate_invalid_token(client: TestClient):
     response = client.post(
         "/api/generate",
         json={
-            "prompt": "Test song",
-            "duration": 30
+            "mode": "custom",
+            "caption": "Test song",
+            "lyrics": "x",
+            "audio_duration": 30,
         },
         headers={"Authorization": "Bearer invalid-token"}
     )

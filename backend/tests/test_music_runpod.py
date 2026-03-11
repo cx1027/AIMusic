@@ -68,13 +68,46 @@ def test_music_generate_and_poll_completed(client: TestClient, test_user: tuple[
         # Create job
         resp = client.post(
             "/api/music/generate",
-            json={"mode": "custom", "prompt": "lofi chill", "audio_duration": 60, "audio_format": "mp3"},
+            json={
+                "mode": "custom",
+                "caption": "lofi chill, dusty drums, warm pads",
+                "lyrics": "[Verse]\nLa la la\n",
+                "audio_duration": 60,
+                "audio_format": "mp3",
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 201
         job = resp.json()
         assert "job_id" in job
         assert job["runpod_job_id"] == "rp_123"
+        
+        # Verify RunPod payload includes all mandatory fields (no None values for numeric params)
+        assert mock_submit.call_count == 1
+        submitted = mock_submit.call_args.kwargs["input_payload"]
+        for k in (
+            "mode",
+            "caption",
+            "lyrics",
+            "duration",
+            "bpm",
+            "keyscale",
+            "timesignature",
+            "vocal_language",
+            "thinking",
+            "lm_temperature",
+            "lm_top_p",
+            "lm_top_k",
+            "lm_cfg_scale",
+            "inference_steps",
+            "guidance_scale",
+            "seed",
+            "batch_size",
+            "audio_format",
+        ):
+            assert k in submitted
+        for k in ("bpm", "lm_temperature", "lm_top_p", "lm_top_k", "lm_cfg_scale", "guidance_scale", "seed"):
+            assert submitted[k] is not None
 
         # Poll status
         resp2 = client.get(

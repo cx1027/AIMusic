@@ -20,6 +20,7 @@ export default function Generate() {
   const [title, setTitle] = useState("My new song");
   const [prompt, setPrompt] = useState("lofi chill beats, rainy night");
   const [sampleQuery, setSampleQuery] = useState<string>("a soft acoustic guitar ballad for a quiet evening");
+  const [simpleInstrumentalOnly, setSimpleInstrumentalOnly] = useState<boolean>(false);
   const [genres, setGenres] = useState<Genre[]>(() => inferGenresFromPrompt("lofi chill beats, rainy night"));
   const [genresAuto, setGenresAuto] = useState<boolean>(true);
   const [lyrics, setLyrics] = useState<string>("");
@@ -103,7 +104,11 @@ export default function Generate() {
     
     // Validation
     if (mode === "custom" && !prompt.trim()) {
-      setErr("Prompt is required for custom mode");
+      setErr("Caption is required for custom mode");
+      return;
+    }
+    if (mode === "custom" && !lyrics.trim()) {
+      setErr("Lyrics are required for custom mode");
       return;
     }
     if (mode === "simple" && !sampleQuery.trim()) {
@@ -138,9 +143,12 @@ export default function Generate() {
       
       if (mode === "simple") {
         payload.sample_query = sampleQuery.trim();
+        payload.instrumental = simpleInstrumentalOnly;
       } else {
-        payload.prompt = prompt.trim();
-        payload.lyrics = lyrics.trim() ? lyrics.trim() : null;
+        // RunPod JSON expects `caption` for custom mode
+        payload.caption = prompt.trim();
+        // Required for custom mode (matches RunPod_JSON_Inputs.md)
+        payload.lyrics = lyrics.trim();
       }
       
       if (bpm !== null) {
@@ -222,7 +230,9 @@ export default function Generate() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Generate AI Song</h1>
-      <p className="mt-2 text-sm text-gray-300">Create your AI-generated song using Simple Mode (AI generates everything) or Custom Mode (you provide caption and lyrics).</p>
+      <p className="mt-2 text-sm text-gray-300">
+        Create your AI-generated song using Simple Mode (sample_query mode: AI infers caption/lyrics/metas) or Custom Mode (you provide prompt; lyrics optional).
+      </p>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
@@ -255,8 +265,8 @@ export default function Generate() {
             </div>
             <p className="text-xs text-gray-400">
               {mode === "simple"
-                ? "AI generates caption, lyrics, and metadata from your description"
-                : "You provide caption and lyrics for full control"}
+                ? "sample_query mode: provide a natural-language description; AI will infer caption/lyrics/metas"
+                : "custom mode: provide a prompt (caption). Lyrics are optional; leave blank for instrumental"}
             </p>
           </div>
 
@@ -275,7 +285,7 @@ export default function Generate() {
           {mode === "simple" ? (
             <div className="space-y-1">
               <label className="text-sm text-gray-200">
-                Sample Query <span className="text-red-400">*</span>
+                Sample Query (sample_query) <span className="text-red-400">*</span>
               </label>
               <textarea
                 value={sampleQuery}
@@ -283,13 +293,29 @@ export default function Generate() {
                 placeholder="e.g. a soft acoustic guitar ballad for a quiet evening"
                 className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
               />
-              <p className="text-xs text-gray-400">Natural language description - AI will generate everything else</p>
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="simpleInstrumentalOnly"
+                  checked={simpleInstrumentalOnly}
+                  onChange={(e) => setSimpleInstrumentalOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/20 bg-black/30 text-white focus:ring-white/30"
+                />
+                <label htmlFor="simpleInstrumentalOnly" className="text-sm text-gray-200 cursor-pointer">
+                  Instrumental only (maps to RunPod JSON simple mode)
+                </label>
+              </div>
+              <p className="text-xs text-gray-400">
+                {simpleInstrumentalOnly
+                  ? "Uses JSON simple mode: server will set lyrics=[Instrumental] and treat this as a pure-instrumental prompt."
+                  : "Natural language description. Uses JSON sample_query mode (LLM infers caption/lyrics/metas)."}
+              </p>
             </div>
           ) : (
             <>
               <div className="space-y-1">
                 <label className="text-sm text-gray-200">
-                  Caption (Prompt) <span className="text-red-400">*</span>
+                  Caption <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={prompt}
@@ -299,13 +325,16 @@ export default function Generate() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm text-gray-200">Lyrics</label>
+                <label className="text-sm text-gray-200">
+                  Lyrics <span className="text-red-400">*</span>
+                </label>
                 <textarea
                   value={lyrics}
                   onChange={(e) => setLyrics(e.target.value)}
                   placeholder="Enter your lyrics here..."
                   className="h-28 w-full resize-none rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
                 />
+                <p className="text-xs text-gray-400">Required for custom mode (matches RunPod JSON custom mode).</p>
               </div>
             </>
           )}

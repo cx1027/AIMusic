@@ -23,6 +23,7 @@ def run_generation_task(
     task_id: str,
     user_id: str,
     mode: str = "custom",
+    caption: str | None = None,
     prompt: str | None = None,
     sample_query: str | None = None,
     lyrics: str | None = None,
@@ -35,6 +36,7 @@ def run_generation_task(
     batch_size: int = 1,
     title: str | None = None,
     genre: str | None = None,
+    instrumental: bool = False,
     **_ignored: object,
 ) -> dict:
     import sys
@@ -51,7 +53,8 @@ def run_generation_task(
     if mode == "simple":
         print(f"[music_generation] Sample query: '{sample_query[:50] if sample_query else 'N/A'}...'", flush=True)
     else:
-        print(f"[music_generation] Prompt: '{prompt[:50] if prompt else 'N/A'}...'", flush=True)
+        effective_caption = caption or prompt
+        print(f"[music_generation] Caption: '{effective_caption[:50] if effective_caption else 'N/A'}...'", flush=True)
     print(f"{'='*80}\n", flush=True)
     
     try:
@@ -59,7 +62,8 @@ def run_generation_task(
         if mode == "simple":
             print(f"MUSIC GENERATION TASK STARTED: task_id={task_id}, mode=simple, sample_query='{sample_query[:50] if sample_query else 'N/A'}...'", flush=True)
         else:
-            print(f"MUSIC GENERATION TASK STARTED: task_id={task_id}, mode=custom, prompt='{prompt[:50] if prompt else 'N/A'}...'", flush=True)
+            effective_caption = caption or prompt
+            print(f"MUSIC GENERATION TASK STARTED: task_id={task_id}, mode=custom, caption='{effective_caption[:50] if effective_caption else 'N/A'}...'", flush=True)
         print(f"{'='*80}\n", flush=True)
         
         # Keep progress monotonic and reserve the tail for upload/db finalize.
@@ -78,12 +82,13 @@ def run_generation_task(
         report(5, "starting")
         
         # Use ACE-Step API instead of local inference
+        effective_prompt = prompt or caption
         try:
             report(10, "calling ACE-Step API")
             api_params = AceStepApiParams(
                 mode=mode,
                 sample_query=sample_query,
-                prompt=prompt,
+                prompt=effective_prompt,
                 lyrics=lyrics,
                 thinking=thinking,
                 audio_duration=audio_duration,
@@ -101,15 +106,16 @@ def run_generation_task(
         except AceStepApiError as e:
             print(f"[music_generation] ACE-Step API failed: {e}, falling back to local inference", flush=True)
             # Fallback to local inference if API fails
-            if mode == "custom" and prompt:
+            if mode == "custom" and effective_prompt:
                 report(15, "fallback: loading local model")
                 report(25, "fallback: generating")
-                res = generate_music(prompt=prompt, lyrics=lyrics, duration=audio_duration, progress_cb=report)
+                res = generate_music(prompt=effective_prompt, lyrics=lyrics, duration=audio_duration, progress_cb=report)
             elif mode == "simple" and sample_query:
                 report(15, "fallback: loading local model")
                 report(25, "fallback: generating")
                 # Use sample_query as prompt for simple mode fallback
-                res = generate_music(prompt=sample_query, lyrics=None, duration=audio_duration, progress_cb=report)
+                fallback_lyrics = "[Instrumental]" if instrumental else None
+                res = generate_music(prompt=sample_query, lyrics=fallback_lyrics, duration=audio_duration, progress_cb=report)
             else:
                 raise RuntimeError(f"Cannot fallback: mode={mode}, prompt={prompt}, sample_query={sample_query}") from e
 
@@ -125,7 +131,7 @@ def run_generation_task(
         cover_image_url = None
         cover_image_error = None
         # Use appropriate prompt for cover image
-        cover_prompt = prompt if mode == "custom" else (sample_query or "Generated music")
+        cover_prompt = (caption or prompt) if mode == "custom" else (sample_query or "Generated music")
         print(f"[music_generation] ========== STARTING COVER IMAGE GENERATION ==========", flush=True)
         print(f"[music_generation] Starting cover image generation...", flush=True)
         print(f"[music_generation] Cover prompt: '{cover_prompt[:100] if cover_prompt else 'N/A'}...'", flush=True)
@@ -162,7 +168,7 @@ def run_generation_task(
         update_task(task_id, status="running", progress=90, message="saving")
         with Session(engine) as db:
             # Use appropriate prompt for song record
-            song_prompt = prompt if mode == "custom" else (sample_query or "Generated")
+            song_prompt = (caption or prompt) if mode == "custom" else (sample_query or "Generated")
             song = Song(
                 user_id=UUID(user_id),
                 title=title or "Generated",
