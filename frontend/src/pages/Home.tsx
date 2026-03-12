@@ -244,6 +244,10 @@ export default function Home() {
               <Link
                 to="/pricing"
                 className="inline-flex items-center gap-2 rounded-full border-2 border-transparent bg-black/30 px-6 py-4 text-base font-semibold text-slate-100 backdrop-blur-sm transition hover:border-white/20 hover:bg-black/50"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
                 View Plans
               </Link>
@@ -306,7 +310,7 @@ export default function Home() {
               </p>
             </div>
             <Link
-              to="/discover"
+              to="/register"
               className="text-sm font-medium text-purple-300 hover:text-purple-200 transition"
             >
               View All →
@@ -392,7 +396,7 @@ export default function Home() {
               </p>
             </div>
             <Link
-              to="/discover"
+              to="/register"
               className="text-sm font-medium text-purple-300 hover:text-purple-200 transition"
             >
               Browse All Artists →
@@ -476,6 +480,63 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="bg-gradient-to-b from-slate-950 via-purple-950/20 to-black py-16 scroll-mt-8">
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white">Simple, Transparent Pricing</h2>
+            <p className="mt-2 text-slate-300">Choose the plan that fits your AI music creation needs.</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+              <div className="text-lg font-semibold text-white">Free</div>
+              <div className="mt-2 text-4xl font-bold text-white">$0</div>
+              <div className="mt-2 text-sm text-slate-300">Try AI song generation</div>
+              <ul className="mt-6 space-y-3 text-sm text-slate-300">
+                <li className="flex items-center gap-2">✓ 5 songs per month</li>
+                <li className="flex items-center gap-2">✓ Basic generation speed</li>
+                <li className="flex items-center gap-2">✓ Personal use only</li>
+              </ul>
+              <button className="mt-8 w-full rounded-lg bg-white/10 px-4 py-3 text-white hover:bg-white/20 transition border border-white/20">
+                Get Started
+              </button>
+            </div>
+            <div className="rounded-2xl border border-purple-500/50 bg-purple-900/20 p-8 backdrop-blur-sm relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white">
+                Most Popular
+              </div>
+              <div className="text-lg font-semibold text-white">Pro</div>
+              <div className="mt-2 text-4xl font-bold text-white">$9<span className="text-lg font-normal text-slate-300">/month</span></div>
+              <div className="mt-2 text-sm text-slate-300">More AI song credits + faster generation</div>
+              <ul className="mt-6 space-y-3 text-sm text-slate-300">
+                <li className="flex items-center gap-2">✓ 100 songs per month</li>
+                <li className="flex items-center gap-2">✓ Faster generation</li>
+                <li className="flex items-center gap-2">✓ Higher audio quality</li>
+                <li className="flex items-center gap-2">✓ Priority support</li>
+              </ul>
+              <button className="mt-8 w-full rounded-lg bg-purple-500 px-4 py-3 text-white hover:bg-purple-600 transition">
+                Choose Pro
+              </button>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+              <div className="text-lg font-semibold text-white">Studio</div>
+              <div className="mt-2 text-4xl font-bold text-white">$29<span className="text-lg font-normal text-slate-300">/month</span></div>
+              <div className="mt-2 text-sm text-slate-300">Unlimited AI songs + commercial use</div>
+              <ul className="mt-6 space-y-3 text-sm text-slate-300">
+                <li className="flex items-center gap-2">✓ Unlimited songs</li>
+                <li className="flex items-center gap-2">✓ Fastest generation</li>
+                <li className="flex items-center gap-2">✓ Commercial use license</li>
+                <li className="flex items-center gap-2">✓ Priority support</li>
+                <li className="flex items-center gap-2">✓ API access</li>
+              </ul>
+              <button className="mt-8 w-full rounded-lg bg-white/10 px-4 py-3 text-white hover:bg-white/20 transition border border-white/20">
+                Choose Studio
+              </button>
             </div>
           </div>
         </div>

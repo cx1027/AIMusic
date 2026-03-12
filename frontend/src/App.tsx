@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useSyncExternalStore } from "react";
 import { useState } from "react";
 import Sidebar from "./components/layout/Sidebar";
@@ -21,9 +21,11 @@ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
+  const location = useLocation();
   const [sidebarWidth, setSidebarWidth] = useState(224);
   const token = useSyncExternalStore(subscribeAuth, getAccessToken, () => null);
   const isLoggedIn = !!token;
+  const isHomePage = location.pathname === "/";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
@@ -84,7 +86,7 @@ export default function App() {
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-        {isLoggedIn && <GlobalPlayer />}
+        {(isLoggedIn || isHomePage) && <GlobalPlayer />}
         <Footer />
       </div>
     </div>
