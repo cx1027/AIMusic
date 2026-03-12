@@ -71,8 +71,8 @@ export default function Sidebar({ width, onWidthChange }: SidebarProps) {
       className="fixed left-0 top-0 z-50 h-screen select-none border-r border-white/10 bg-black/40 px-4 py-6"
       style={{ width }}
     >
-      <Link to="/generate" className="mb-8 block font-semibold tracking-tight">
-        AI Music · Generate & Share
+      <Link to="/generate" className="mb-8 block text-xl font-bold uppercase tracking-widest text-white">
+        Melodrift
       </Link>
 
       <nav className="flex flex-col gap-1">
