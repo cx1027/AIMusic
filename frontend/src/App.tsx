@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useSyncExternalStore } from "react";
 import { useState } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Footer from "./components/layout/Footer";
 import Protected from "./components/auth/Protected";
 import GlobalPlayer from "./components/player/GlobalPlayer";
+import { getAccessToken, subscribeAuth } from "./lib/auth";
 
 import Home from "./pages/Home";
 import Generate from "./pages/Generate";
@@ -20,11 +22,15 @@ import NotFound from "./pages/NotFound";
 
 export default function App() {
   const [sidebarWidth, setSidebarWidth] = useState(224);
+  const token = useSyncExternalStore(subscribeAuth, getAccessToken, () => null);
+  const isLoggedIn = !!token;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
-      <Sidebar width={sidebarWidth} onWidthChange={setSidebarWidth} />
-      <div style={{ paddingLeft: sidebarWidth }}>
+      {isLoggedIn && (
+        <Sidebar width={sidebarWidth} onWidthChange={setSidebarWidth} />
+      )}
+      <div style={{ paddingLeft: isLoggedIn ? sidebarWidth : 0 }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
@@ -78,7 +84,7 @@ export default function App() {
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-        <GlobalPlayer />
+        {isLoggedIn && <GlobalPlayer />}
         <Footer />
       </div>
     </div>
