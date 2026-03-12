@@ -33,7 +33,8 @@ export default function Generate() {
   const [audioFormat, setAudioFormat] = useState<string>("mp3");
   const [inferenceSteps, setInferenceSteps] = useState<number>(8);
   const [batchSize, setBatchSize] = useState<number>(1);
-  
+  const [showMoreOptions, setShowMoreOptions] = useState<boolean>(false);
+
   const [err, setErr] = useState<string | null>(null);
   const [state, setState] = useState<GenState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -369,10 +370,27 @@ export default function Generate() {
             </div>
           </div>
 
-          {/* Optional Parameters Section */}
+          {/* More Options (expand/collapse) */}
           <div className="space-y-3 border-t border-white/10 pt-3">
-            <div className="text-sm font-medium text-gray-200">Optional Parameters</div>
-            
+            <button
+              type="button"
+              onClick={() => setShowMoreOptions(!showMoreOptions)}
+              className="flex w-full items-center gap-2 text-left text-sm font-medium text-gray-200 hover:text-white"
+            >
+              <svg
+                className={`h-5 w-5 shrink-0 transition-transform ${showMoreOptions ? "rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              <span>More Options</span>
+            </button>
+
+            {showMoreOptions && (
+            <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm text-gray-200">
@@ -469,6 +487,9 @@ export default function Generate() {
                 Use 5Hz LM for enhanced quality (thinking)
               </label>
             </div>
+            </div>
+            )}
+
           </div>
 
           {err ? <div className="text-sm text-red-300">{err}</div> : null}
