@@ -164,8 +164,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* Header with Logo and Auth Buttons */}
+      <section className="absolute left-0 right-0 top-0 z-50 px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="text-2xl font-bold text-white">
+            Melodrift
+          </div>
+          <div className="flex gap-3">
+            <Link
+              to="/login"
+              className="rounded-full border border-white/30 bg-black/40 px-4 py-2 text-sm font-semibold text-white backdrop-blur"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/register"
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black shadow-lg"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Hero Section with Album Cover Mosaic Background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-900 py-20 sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-900 pt-24 pb-20 sm:pt-28 sm:pb-32">
         {/* Album Cover Mosaic Background */}
         <div className="absolute inset-0 opacity-20">
           <div className="grid grid-cols-5 gap-2 p-4 blur-sm">
