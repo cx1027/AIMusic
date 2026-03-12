@@ -49,10 +49,10 @@ export default function Sidebar({ width, onWidthChange }: SidebarProps) {
   }, [dragging, onWidthChange]);
 
   const navItems = [
-    { path: "/generate", label: "Generate AI Song" },
-    { path: "/playlists", label: "Playlists" },
     { path: "/discover", label: "Discover" },
-    { path: "/pricing", label: "Pricing" },
+    { path: "/generate", label: "Generate" },
+    { path: "/library", label: "Library" },
+    { path: "/playlists", label: "Playlists" },
   ];
 
   const authItems = token
@@ -63,8 +63,6 @@ export default function Sidebar({ width, onWidthChange }: SidebarProps) {
         { path: "/login", label: "Login" },
         { path: "/register", label: "Register" },
       ];
-
-  const libraryItem = { path: "/library", label: "Library" };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -119,19 +117,6 @@ export default function Sidebar({ width, onWidthChange }: SidebarProps) {
             Logout
           </button>
         )}
-
-        <div className="my-3 border-t border-white/10" />
-
-        <Link
-          to={libraryItem.path}
-          className={`rounded-md px-3 py-2 text-sm transition-colors ${
-            isActive(libraryItem.path)
-              ? "bg-white/10 text-white"
-              : "text-gray-300 hover:bg-white/5 hover:text-white"
-          }`}
-        >
-          {libraryItem.label}
-        </Link>
       </nav>
 
       <div
