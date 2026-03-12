@@ -28,7 +28,7 @@ export default function Generate() {
   // Optional parameters
   const [thinking, setThinking] = useState<boolean>(true);
   const [audioDuration, setAudioDuration] = useState<number>(60);
-  const [bpm, setBpm] = useState<number | null>(120);
+  const [bpm, setBpm] = useState<number | null>(null);
   const [vocalLanguage, setVocalLanguage] = useState<string>("en");
   const [audioFormat, setAudioFormat] = useState<string>("mp3");
   const [inferenceSteps, setInferenceSteps] = useState<number>(8);
@@ -370,6 +370,22 @@ export default function Generate() {
             </div>
           </div>
 
+          {/* Audio Duration - between Genre tags and More Options */}
+          <div className="space-y-1">
+            <label className="text-sm text-gray-200">
+              Audio Duration (s) <span className="text-gray-400">*</span>
+            </label>
+            <input
+              type="number"
+              min={10}
+              max={600}
+              value={audioDuration}
+              onChange={(e) => setAudioDuration(parseInt(e.target.value || "60", 10))}
+              className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
+            />
+            <p className="text-xs text-gray-400">10-600 seconds</p>
+          </div>
+
           {/* More Options (expand/collapse) */}
           <div className="space-y-3 border-t border-white/10 pt-3">
             <button
@@ -392,21 +408,6 @@ export default function Generate() {
             {showMoreOptions && (
             <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm text-gray-200">
-                  Audio Duration (s) <span className="text-gray-400">*</span>
-                </label>
-                <input
-                  type="number"
-                  min={10}
-                  max={600}
-                  value={audioDuration}
-                  onChange={(e) => setAudioDuration(parseInt(e.target.value || "60", 10))}
-                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-                />
-                <p className="text-xs text-gray-400">10-600 seconds</p>
-              </div>
-              
               <div className="space-y-1">
                 <label className="text-sm text-gray-200">BPM</label>
                 <input
@@ -447,45 +448,6 @@ export default function Generate() {
                   <option value="wav">WAV</option>
                 </select>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm text-gray-200">Inference Steps</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={inferenceSteps}
-                  onChange={(e) => setInferenceSteps(parseInt(e.target.value || "8", 10))}
-                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-sm text-gray-200">Batch Size</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={batchSize}
-                  onChange={(e) => setBatchSize(parseInt(e.target.value || "1", 10))}
-                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="thinking"
-                checked={thinking}
-                onChange={(e) => setThinking(e.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-black/30 text-white focus:ring-white/30"
-              />
-              <label htmlFor="thinking" className="text-sm text-gray-200 cursor-pointer">
-                Use 5Hz LM for enhanced quality (thinking)
-              </label>
             </div>
             </div>
             )}
