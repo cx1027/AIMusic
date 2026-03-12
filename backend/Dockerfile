@@ -7,13 +7,14 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# Use the slim API-only dependency set by default.
+COPY requirements.api.txt /app/requirements.api.txt
+RUN pip install --no-cache-dir -r /app/requirements.api.txt
 
 COPY app /app/app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 
