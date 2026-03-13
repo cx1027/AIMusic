@@ -22,6 +22,7 @@
     "wavesurfer.js": "7.8.7"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
     "@vitejs/plugin-react": "4.2.1",
