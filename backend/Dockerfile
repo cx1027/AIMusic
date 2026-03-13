@@ -13,8 +13,12 @@ RUN pip install --no-cache-dir -r /app/requirements.api.txt
 
 COPY app /app/app
 
+# Copy migration scripts and init_db.py
+COPY init_db.py /app/init_db.py
+COPY migrate_*.py /app/
+
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python init_db.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 
 
