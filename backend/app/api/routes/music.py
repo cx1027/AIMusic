@@ -106,6 +106,7 @@ def music_generate(
         if not lyrics:
             raise HTTPException(status_code=400, detail="lyrics is required for custom mode")
         sample_query = None
+        prompt = caption  # Back-compat: use caption as prompt
 
     # Optional fields (pass-through to RunPod input)
     title = payload.get("title")
