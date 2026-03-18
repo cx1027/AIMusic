@@ -27,7 +27,7 @@ export default function GlobalPlayer() {
         currentItem: s.currentIndex >= 0 ? s.queue[s.currentIndex] ?? null : null
       });
     });
-    return unsub;
+    return () => { unsub(); };
   }, []);
 
   // Sync audio element source & playback with store

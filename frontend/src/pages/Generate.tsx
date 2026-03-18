@@ -166,7 +166,7 @@ export default function Generate() {
           status: "running",
           progress: 5,
           message: "queued",
-          result: null,
+          result: undefined,
         });
 
         const pollOnce = async () => {
@@ -176,7 +176,7 @@ export default function Generate() {
             status: (next.status as any) || "running",
             progress: Number(next.progress ?? 0),
             message: next.message,
-            result: next.result || null,
+            result: next.result || undefined,
           });
           if (next.status === "completed" || next.status === "failed") {
             if (pollTimerRef.current) {

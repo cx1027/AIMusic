@@ -46,6 +46,8 @@ export const api = {
       background_url?: string | null;
       credits_balance: number;
       details?: string | null;
+      followers_count?: number;
+      following_count?: number;
     }>(`/api/users/me`),
   getUserByUsername: (username: string) =>
     http<{

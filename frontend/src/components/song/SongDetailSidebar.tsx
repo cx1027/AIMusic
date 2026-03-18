@@ -155,7 +155,7 @@ export default function SongDetailSidebar({ songId, onClose, onLikeChange }: Son
             {song.cover_image_url && (
               <div className="overflow-hidden rounded-xl border border-white/10 bg-black/40">
                 <img
-                  src={resolveMediaUrl(song.cover_image_url)}
+                  src={resolveMediaUrl(song.cover_image_url) || undefined}
                   alt={song.title}
                   className="w-full h-auto object-contain"
                 />

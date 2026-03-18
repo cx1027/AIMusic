@@ -15,7 +15,7 @@ export default function SharePoster(props: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    QRCode.toDataURL(shareUrl, { width: 256, margin: 1 }, (err, url) => {
+    QRCode.toDataURL(shareUrl, { width: 256, margin: 1 }, (err: Error | null, url: string) => {
       if (err || cancelled) return;
       setQrUrl(url);
     });
