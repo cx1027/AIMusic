@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
+import { API_BASE } from "../lib/http";
 import { getAccessToken } from "../lib/auth";
 
 type UseWaveSurferOptions = {
   url: string | null;
 };
+
+/** Only send auth for same-origin API requests; external URLs (e.g. R2) must not get custom headers to avoid CORS preflight failure. */
+function buildFetchParams(url: string): RequestInit {
+  const isOurApi = url.startsWith(API_BASE);
+  if (!isOurApi) return {};
+  const token = getAccessToken();
+  if (!token) return {};
+  return {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+}
 
 export function useWaveSurfer({ url }: UseWaveSurferOptions) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -20,16 +32,7 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
   useEffect(() => {
     if (!containerRef.current || !url) return;
 
-    // Get auth token for fetch headers
-    // Wavesurfer needs auth headers to fetch audio files that may require authentication
-    const token = getAccessToken();
-    const fetchParams: RequestInit = token
-      ? {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      : {};
+    const fetchParams = buildFetchParams(url);
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
@@ -39,7 +42,6 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       barWidth: 2,
       barGap: 1,
       height: 96,
-      responsive: true,
       fetchParams,
     });
 
@@ -81,9 +83,10 @@ export function useWaveSurfer({ url }: UseWaveSurferOptions) {
       ws.un("pause", onPause);
       ws.un("timeupdate", onTimeUpdate);
       try {
-      ws.destroy();
+        ws.destroy();
       } catch (e) {
         // Ignore errors during cleanup (e.g., AbortError from aborted fetch)
+        if (e instanceof Error && e.name === "AbortError") return;
         console.debug("Error during wavesurfer cleanup:", e);
       }
       waveSurferRef.current = null;

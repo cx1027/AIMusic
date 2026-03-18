@@ -1,8 +1,10 @@
+import { Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import DetailPlayer from "../components/player/DetailPlayer";
 import { api } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
+import { playerStore } from "../stores/playerStore";
 
 type SongDetailData = {
   id: string;
@@ -116,6 +118,45 @@ export default function SongDetail() {
       .finally(() => setLikeLoading(false));
   };
 
+  const handlePlay = () => {
+    if (!song || !song.audio_url) return;
+    const url = resolveMediaUrl(song.audio_url);
+    if (!url) return;
+
+    // Optimistically bump play count
+    setSong((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        play_count: prev.play_count + 1,
+      };
+    });
+
+    // Persist play count to backend (best-effort)
+    api.incrementPlayCount(song.id).catch(() => {
+      // Revert optimistic update on failure
+      setSong((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          play_count: Math.max(prev.play_count - 1, 0),
+        };
+      });
+    });
+
+    // Set player queue and start playing
+    playerStore.setQueue(
+      [
+        {
+          id: song.id,
+          title: song.title,
+          audioUrl: url,
+        },
+      ],
+      0
+    );
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       {loading && <div className="text-gray-300">Loading…</div>}
@@ -123,49 +164,61 @@ export default function SongDetail() {
 
       {!loading && !error && song && (
         <>
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
+          <div className="flex flex-col gap-6 md:flex-row md:items-start">
+            {song.cover_image_url && (
+              <img
+                src={resolveMediaUrl(song.cover_image_url) || undefined}
+                alt={song.title}
+                className="h-48 w-48 flex-shrink-0 rounded-lg object-cover"
+              />
+            )}
+            <div className="flex-1">
               <p className="text-xs uppercase tracking-wide text-gray-400">AI Song</p>
               <h1 className="mt-1 text-3xl font-semibold text-white">{song.title}</h1>
               <p className="mt-2 text-sm text-gray-300">
                 Generated at {new Date(song.created_at).toLocaleString()}
               </p>
-            </div>
-            <div className="flex gap-4 text-xs text-gray-400">
-              <div>
-                <div className="font-medium text-gray-200">Plays</div>
-                <div className="mt-1 tabular-nums">{song.play_count}</div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="font-medium text-gray-200">Likes</div>
-                  <button
-                    type="button"
-                    onClick={handleToggleLike}
-                    disabled={likeLoading}
-                    className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-white/10 disabled:opacity-60"
-                  >
-                    {likeLoading
-                      ? "…"
-                      : // @ts-expect-error backend may return liked_by_me
-                        song.liked_by_me
-                      ? "Liked"
-                      : "Like"}
-                  </button>
-                </div>
-                <div className="mt-1 tabular-nums">{song.like_count}</div>
-              </div>
-              {song.bpm != null && (
-                <div>
-                  <div className="font-medium text-gray-200">BPM</div>
-                  <div className="mt-1 tabular-nums">{song.bpm}</div>
-                </div>
+              {song.audio_url && (
+                <button
+                  type="button"
+                  onClick={handlePlay}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+                >
+                  <Play className="h-4 w-4" />
+                  Play
+                </button>
               )}
+              <div className="mt-6 flex gap-6 text-xs text-gray-400">
+                <div>
+                  <div className="font-medium text-gray-200">Plays</div>
+                  <div className="mt-1 tabular-nums">{song.play_count}</div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-medium text-gray-200">Likes</div>
+                    <button
+                      type="button"
+                      onClick={handleToggleLike}
+                      disabled={likeLoading}
+                      className="rounded-full border border-white/20 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-white/10 disabled:opacity-60"
+                    >
+                      {likeLoading
+                        ? "…"
+                        : song.liked_by_me
+                        ? "Liked"
+                        : "Like"}
+                    </button>
+                  </div>
+                  <div className="mt-1 tabular-nums">{song.like_count}</div>
+                </div>
+                {song.bpm != null && (
+                  <div>
+                    <div className="font-medium text-gray-200">BPM</div>
+                    <div className="mt-1 tabular-nums">{song.bpm}</div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-5">
-            <DetailPlayer audioUrl={song.audio_url} durationSeconds={song.duration} />
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2">
