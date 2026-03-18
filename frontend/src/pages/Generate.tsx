@@ -171,12 +171,19 @@ export default function Generate() {
 
         const pollOnce = async () => {
           const next = (await getMusicJobStatus(jobId)) as unknown as MusicPollState;
+          // Normalize result to fix type mismatch (null -> undefined, |null -> |undefined)
+          const normalizedResult = next.result
+            ? {
+                ...next.result,
+                cover_image_url: next.result.cover_image_url ?? undefined,
+              }
+            : undefined;
           setState({
             task_id: jobId,
             status: (next.status as any) || "running",
             progress: Number(next.progress ?? 0),
             message: next.message,
-            result: next.result || undefined,
+            result: normalizedResult,
           });
           if (next.status === "completed" || next.status === "failed") {
             if (pollTimerRef.current) {

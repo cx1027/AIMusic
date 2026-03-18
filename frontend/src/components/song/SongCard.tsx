@@ -171,10 +171,10 @@ export default function SongCard({
             )}
             {showDate && (
               <div className={`text-xs text-gray-400 ${showUsername ? "mt-0.5" : "mt-1"}`}>
-                {(variant ?? "card") === "card" && showUsername
-                  ? new Date(song.created_at).toLocaleString()
-                  : variant === "list"
+                {variant === "list"
                   ? `Added: ${new Date(song.created_at).toLocaleString()}`
+                  : showUsername
+                  ? new Date(song.created_at).toLocaleString()
                   : new Date(song.created_at).toLocaleString()}
               </div>
             )}
