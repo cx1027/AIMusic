@@ -21,7 +21,7 @@ type SongCardProps = {
     like_count?: number;
     liked_by_me?: boolean;
   };
-  normalizedVariant?: "card" | "list";
+  variant?: "card" | "list";
   coverShape?: "square" | "rect";
   isPlaying?: boolean;
   showPlayButton?: boolean;
@@ -45,7 +45,7 @@ type SongCardProps = {
 
 export default function SongCard({
   song,
-  normalizedVariant = "card",
+  variant = "card",
   coverShape = "square",
   isPlaying = false,
   showPlayButton = true,
@@ -66,23 +66,21 @@ export default function SongCard({
   additionalActions,
   footer,
 }: SongCardProps) {
-  // Normalize normalizedVariant to ensure TypeScript correctly narrows the type
-  const normalizedVariant = normalizedVariant ?? "card";
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/songs/${encodeURIComponent(song.id)}` : "";
   const coverImageSrc = song.cover_image_url ? resolveMediaUrl(song.cover_image_url) : null;
   const coverSizeClasses = coverShape === "rect" ? "h-24 w-16" : "h-16 w-16";
   const playingClasses = isPlaying
-    ? normalizedVariant === "card"
+    ? variant === "card"
       ? "border-pink-400/60 bg-pink-500/10"
       : "bg-pink-500/10 border border-pink-400/60"
-    : normalizedVariant === "card"
+    : variant === "card"
     ? "border-white/10 bg-black/20"
     : "";
 
   const containerClasses =
-    normalizedVariant === "card"
+    variant === "card"
       ? `group space-y-2 rounded-lg border p-3 ${playingClasses}`
       : `group flex items-center justify-between py-2 px-2 rounded-md ${playingClasses}`;
 
@@ -90,9 +88,9 @@ export default function SongCard({
     <Link
       to={linkTo || `/songs/${song.id}`}
       className={`${
-        normalizedVariant === "card" ? "text-gray-100" : "text-sm font-medium"
+        variant === "card" ? "text-gray-100" : "text-sm font-medium"
       } truncate hover:underline ${
-        normalizedVariant === "list" ? "text-left block w-full" : ""
+        variant === "list" ? "text-left block w-full" : ""
       }`}
     >
       {song.title || "Untitled"}
@@ -101,9 +99,9 @@ export default function SongCard({
     <button
       onClick={onSelect}
       className={`${
-        normalizedVariant === "card" ? "text-gray-100" : "text-sm font-medium"
+        variant === "card" ? "text-gray-100" : "text-sm font-medium"
       } truncate text-left hover:underline cursor-pointer ${
-        normalizedVariant === "list" ? "block w-full" : ""
+        variant === "list" ? "block w-full" : ""
       }`}
     >
       {song.title || "Untitled"}
@@ -112,7 +110,7 @@ export default function SongCard({
 
   const content = (
     <>
-      {normalizedVariant === "card" ? (
+      {variant === "card" ? (
         <div className="flex items-center justify-between gap-3">
           {coverImageSrc && (
             <div className="relative flex-shrink-0">
@@ -173,7 +171,7 @@ export default function SongCard({
             )}
             {showDate && (
               <div className={`text-xs text-gray-400 ${showUsername ? "mt-0.5" : "mt-1"}`}>
-                {normalizedVariant === "list"
+                {(variant as string) === "list"
                   ? `Added: ${new Date(song.created_at).toLocaleString()}`
                   : showUsername
                   ? new Date(song.created_at).toLocaleString()
@@ -181,7 +179,7 @@ export default function SongCard({
               </div>
             )}
           </div>
-          <div className={`relative flex items-center ${normalizedVariant === "card" ? "gap-3" : "gap-2"} text-xs`}>
+          <div className={`relative flex items-center ${variant === "card" ? "gap-3" : "gap-2"} text-xs`}>
             {showPlayButton && (
               <>
                 {song.audio_url ? (
@@ -551,7 +549,7 @@ export default function SongCard({
     </>
   );
 
-  if (normalizedVariant === "list") {
+  if (variant === "list") {
     return <li className={containerClasses}>{content}</li>;
   }
 
