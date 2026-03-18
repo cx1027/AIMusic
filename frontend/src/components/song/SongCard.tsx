@@ -271,6 +271,10 @@ export default function SongCard({
               }`}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!song.is_public) {
+                  window.alert("This song is private. Please make it public first to share.");
+                  return;
+                }
                 setIsShareMenuOpen((open) => !open);
               }}
             >
@@ -457,6 +461,10 @@ export default function SongCard({
               }`}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!song.is_public) {
+                  window.alert("This song is private. Please make it public first to share.");
+                  return;
+                }
                 setIsShareMenuOpen((open) => !open);
               }}
             >

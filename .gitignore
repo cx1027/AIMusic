@@ -41,3 +41,5 @@ dist/
 .home/
 *.cache/
 
+.cursor/
+

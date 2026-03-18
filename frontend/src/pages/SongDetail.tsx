@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import DetailPlayer from "../components/player/DetailPlayer";
-import { api, Playlist, PlaylistWithSongs } from "../lib/api";
+import { api } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 
 type SongDetailData = {
@@ -17,6 +17,7 @@ type SongDetailData = {
   is_public: boolean;
   play_count: number;
   like_count: number;
+  liked_by_me?: boolean;
   created_at: string;
 };
 
@@ -25,12 +26,6 @@ export default function SongDetail() {
   const [song, setSong] = useState<SongDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [playlistsLoading, setPlaylistsLoading] = useState(false);
-  const [playlistsError, setPlaylistsError] = useState<string | null>(null);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>("");
-  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithSongs | null>(null);
-  const [playlistActionLoading, setPlaylistActionLoading] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
 
   useEffect(() => {
@@ -98,61 +93,6 @@ export default function SongDetail() {
     };
   }, [song]);
 
-  // 加载当前用户的所有 playlists
-  useEffect(() => {
-    setPlaylistsLoading(true);
-    setPlaylistsError(null);
-    api
-      .listPlaylists()
-      .then((data) => {
-        setPlaylists(data);
-        if (data.length > 0 && !selectedPlaylistId) {
-          setSelectedPlaylistId(data[0].id);
-        }
-      })
-      .catch((e: any) => {
-        setPlaylistsError(e?.message || "Failed to load playlists");
-      })
-      .finally(() => setPlaylistsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 当选择的 playlist 变化时，加载该 playlist 的详情以判断当前歌曲是否在其中
-  useEffect(() => {
-    if (!selectedPlaylistId) {
-      setSelectedPlaylist(null);
-      return;
-    }
-    setPlaylistsLoading(true);
-    api
-      .getPlaylist(selectedPlaylistId)
-      .then((pl) => {
-        setSelectedPlaylist(pl);
-      })
-      .catch((e: any) => {
-        setPlaylistsError(e?.message || "Failed to load playlist detail");
-      })
-      .finally(() => setPlaylistsLoading(false));
-  }, [selectedPlaylistId]);
-
-  const isInSelectedPlaylist =
-    !!song && !!selectedPlaylist && selectedPlaylist.songs.some((s) => s.id === song.id);
-
-  const handleTogglePlaylist = () => {
-    if (!song || !selectedPlaylistId) return;
-    setPlaylistActionLoading(true);
-    const action = isInSelectedPlaylist ? api.removeSongFromPlaylist : api.addSongToPlaylist;
-    action(selectedPlaylistId, song.id)
-      .then((updated) => {
-        setSelectedPlaylist(updated);
-        setPlaylistsError(null);
-      })
-      .catch((e: any) => {
-        setPlaylistsError(e?.message || "Failed to update playlist");
-      })
-      .finally(() => setPlaylistActionLoading(false));
-  };
-
   const handleToggleLike = () => {
     if (!song || likeLoading) return;
     setLikeLoading(true);
@@ -171,7 +111,7 @@ export default function SongDetail() {
         });
       })
       .catch((e: any) => {
-        setPlaylistsError(e?.message || "Failed to like song");
+        setError(e?.message || "Failed to like song");
       })
       .finally(() => setLikeLoading(false));
   };
@@ -226,59 +166,6 @@ export default function SongDetail() {
 
           <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-5">
             <DetailPlayer audioUrl={song.audio_url} durationSeconds={song.duration} />
-          </div>
-
-          {/* Playlist 选择与添加/移除 */}
-          <div className="mt-6 rounded-xl border border-white/10 bg-black/40 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">Playlists</h2>
-              {playlistsLoading && (
-                <span className="text-xs text-gray-400">Loading playlists…</span>
-              )}
-            </div>
-            {playlistsError && (
-              <p className="mt-2 text-xs text-red-400">{playlistsError}</p>
-            )}
-            {playlists.length === 0 && !playlistsLoading ? (
-              <p className="mt-2 text-sm text-gray-400">
-                You don&apos;t have any playlists yet. Create one from the Playlists page.
-              </p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <select
-                  value={selectedPlaylistId}
-                  onChange={(e) => setSelectedPlaylistId(e.target.value)}
-                  className="w-full rounded-md border border-white/15 bg-black/60 px-3 py-2 text-sm text-white outline-none ring-0 focus:border-white/40 focus:outline-none sm:max-w-xs"
-                >
-                  {playlists.map((pl) => (
-                    <option key={pl.id} value={pl.id}>
-                      {pl.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleTogglePlaylist}
-                  disabled={
-                    !selectedPlaylistId || playlistActionLoading || playlistsLoading
-                  }
-                  className="inline-flex items-center justify-center rounded-md border border-white/20 px-3 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {playlistActionLoading || playlistsLoading
-                    ? "Updating…"
-                    : isInSelectedPlaylist
-                    ? "Remove from playlist"
-                    : "Add to playlist"}
-                </button>
-              </div>
-            )}
-            {selectedPlaylist && song && (
-              <p className="mt-2 text-xs text-gray-400">
-                This song is{" "}
-                {isInSelectedPlaylist ? "already in" : "not yet in"}{" "}
-                &ldquo;{selectedPlaylist.name}&rdquo;.
-              </p>
-            )}
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2">

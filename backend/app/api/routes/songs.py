@@ -95,20 +95,22 @@ def create_song(
 def get_song(
     song_id: UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_current_user_optional),
 ) -> SongPublic:
     song = db.get(Song, song_id)
     # Allow owners to see all their songs, and non-owners to see public songs
-    if not song or (not song.is_public and song.user_id != user.id):
+    if not song or (not song.is_public and (not user or song.user_id != user.id)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
-    liked = db.exec(
-        select(SongLike).where(
-            SongLike.user_id == user.id,
-            SongLike.song_id == song_id,
-        )
-    ).first()
+    liked = False
+    if user:
+        liked = db.exec(
+            select(SongLike).where(
+                SongLike.user_id == user.id,
+                SongLike.song_id == song_id,
+            )
+        ).first() is not None
     song_public = SongPublic.model_validate(song, from_attributes=True)
-    song_public.liked_by_me = liked is not None
+    song_public.liked_by_me = liked
     return song_public
 
 

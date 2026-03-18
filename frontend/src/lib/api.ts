@@ -106,7 +106,7 @@ export const api = {
       }>
     >(url);
   },
-  getSong: (songId: string) => authedHttp<{
+  getSong: (songId: string) => http<{
     id: string;
     title: string;
     prompt: string;
@@ -118,6 +118,7 @@ export const api = {
     is_public: boolean;
     play_count: number;
     like_count: number;
+    liked_by_me?: boolean;
     created_at: string;
   }>(`/api/songs/${songId}`),
   deleteSong: (songId: string) =>
