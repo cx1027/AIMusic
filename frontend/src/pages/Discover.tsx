@@ -79,6 +79,7 @@ export default function Discover() {
   >({});
   const [showAllPopularSongs, setShowAllPopularSongs] = useState(false);
   const [showAllPopularArtists, setShowAllPopularArtists] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const addToButtonRef = useRef<HTMLButtonElement | null>(null);
   const addToMenuRef = useRef<HTMLDivElement | null>(null);
   const [addToMenuPosition, setAddToMenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -384,11 +385,13 @@ export default function Discover() {
             </div>
           </div>
 
-          {discoverLoading && <div className="mt-4 text-sm text-gray-300">Loading discover feed…</div>}
-          {discoverError && !discoverLoading && <div className="mt-4 text-sm text-red-300">{String(discoverError)}</div>}
-          {!discoverLoading && !discoverError && !popularSongs.length && (
+          {discoverLoading ? (
+            <div className="mt-4 text-sm text-gray-300">Loading discover feed…</div>
+          ) : !discoverLoading && discoverError ? (
+            <div className="mt-4 text-sm text-red-300">{String(discoverError)}</div>
+          ) : !discoverLoading && !discoverError && !popularSongs.length ? (
             <div className="mt-4 text-xs text-gray-400">No AI songs shared yet. Be the first to generate and share one.</div>
-          )}
+          ) : null}
 
           {!discoverLoading && !discoverError && popularSongs.length > 0 && (
             <>

@@ -19,7 +19,7 @@ interface CacheEntry<T> {
   fetchedAt: number;
 }
 
-interface LoadingEntry {
+interface LoadingEntry<T> {
   data: T | undefined;
   error: undefined;
   isLoading: true;
@@ -33,7 +33,7 @@ interface ErrorEntry<T> {
   fetchedAt: number;
 }
 
-type Entry<T> = CacheEntry<T> | LoadingEntry | ErrorEntry<T>;
+type Entry<T> = CacheEntry<T> | LoadingEntry<T> | ErrorEntry<T>;
 
 type PrefetchEntry<T> = {
   data: T | undefined;
@@ -136,7 +136,7 @@ class PrefetchStoreImpl {
 
     // 3. No data available — must wait
     const promise = this._fetchAndCache(key, fetcher);
-    this.store.set(key, { isLoading: true, promise, data: cached.data });
+    this.store.set(key, { isLoading: true, promise, data: cached.data } as LoadingEntry<T>);
     this.notify(key);
 
     try {

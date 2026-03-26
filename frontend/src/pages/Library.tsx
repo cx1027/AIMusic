@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { api, type Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
-import { SongDetailSidebar } from "../components/song/SongDetailSidebar";
-import { SongCard } from "../components/song/SongCard";
+import SongDetailSidebar from "../components/song/SongDetailSidebar";
+import SongCard from "../components/song/SongCard";
 import { usePrefetch } from "../stores/usePrefetch";
 import { PREFETCH_LIBRARY } from "../stores/prefetchService";
 
@@ -370,7 +370,7 @@ export default function Library() {
       <SongDetailSidebar
         songId={selectedSongId}
         onClose={() => setSelectedSongId(null)}
-        onLikeChange={({ songId, liked, like_count }) => {
+        onLikeChange={({ songId, liked, like_count }: { songId: string; liked: boolean; like_count: number }) => {
           setSongs((prev) =>
             prev.map((s) =>
               s.id === songId

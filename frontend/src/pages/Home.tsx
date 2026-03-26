@@ -336,14 +336,15 @@ export default function Home() {
             </Link>
           </div>
 
-          {discoverLoading && <div className="text-sm text-slate-300">Loading popular songs…</div>}
-          {discoverError && !discoverLoading && <div className="text-sm text-red-300">{String(discoverError)}</div>}
-          {!discoverLoading && !discoverError && !trending.length && (
+          {discoverLoading ? (
+            <div className="text-sm text-slate-300">Loading popular songs…</div>
+          ) : !discoverLoading && discoverError ? (
+            <div className="text-sm text-red-300">{String(discoverError)}</div>
+          ) : !discoverLoading && !trending.length ? (
             <div className="text-sm text-slate-400">
               No AI songs shared yet. Be the first to generate and share one.
             </div>
-          )}
-
+          ) : null}
           {!discoverLoading && !discoverError && trending.length > 0 && (
             <div className="flex gap-4 overflow-x-auto pb-4">
               {trending.slice(0, 6).map((s) => {
@@ -422,11 +423,13 @@ export default function Home() {
             </Link>
           </div>
 
-          {discoverLoading && <div className="text-sm text-slate-300">Finding standout artists…</div>}
-          {discoverError && !discoverLoading && <div className="text-sm text-red-300">{String(discoverError)}</div>}
-          {!discoverLoading && !discoverError && !popularArtists.length && (
+          {discoverLoading ? (
+            <div className="text-sm text-slate-300">Finding standout artists…</div>
+          ) : !discoverLoading && discoverError ? (
+            <div className="text-sm text-red-300">{String(discoverError)}</div>
+          ) : !discoverLoading && !popularArtists.length ? (
             <div className="text-sm text-slate-400">Top creators will appear here as AI songs get likes and shares.</div>
-          )}
+          ) : null}
 
           {!discoverLoading && !discoverError && popularArtists.length > 0 && (
             <div className="flex gap-4 overflow-x-auto pb-4">
