@@ -108,7 +108,7 @@ export const api = {
       }>
     >(url);
   },
-  getSong: (songId: string) => http<{
+  getSong: (songId: string) => authedHttp<{
     id: string;
     title: string;
     prompt: string;
