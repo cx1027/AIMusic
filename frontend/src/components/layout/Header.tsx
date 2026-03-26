@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearTokens, getAccessToken, subscribeAuth } from "../../lib/auth";
 import { api } from "../../lib/api";
+import { prefetchService } from "../../stores/prefetchService";
 
 export default function Header() {
   const nav = useNavigate();
@@ -60,6 +61,7 @@ export default function Header() {
                 className="rounded-md border border-white/15 px-3 py-1 hover:bg-white/10"
                 onClick={() => {
                   clearTokens();
+                  prefetchService.clear();
                   nav("/login");
                 }}
               >

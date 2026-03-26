@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { setTokens } from "../lib/auth";
+import { prefetchService } from "../stores/prefetchService";
 
 export default function Login() {
   const nav = useNavigate();
@@ -18,6 +19,8 @@ export default function Login() {
     try {
       const res = await api.login(email, password);
       setTokens(res.access_token, res.refresh_token);
+      // Kick off background prefetches before navigating
+      prefetchService.start();
       const from = (location.state as any)?.from?.pathname || "/generate";
       nav(from, { replace: true });
     } catch (e: any) {

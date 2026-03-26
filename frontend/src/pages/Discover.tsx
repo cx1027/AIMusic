@@ -9,6 +9,8 @@ import SongCard from "../components/song/SongCard";
 import { DiscoverSongCard } from "../components/discover/DiscoverSongCard";
 import { PopularArtistCard } from "../components/discover/PopularArtistCard";
 import { inferGenresFromPrompt } from "../lib/genres";
+import { usePrefetch } from "../stores/usePrefetch";
+import { PREFETCH_DISCOVER } from "../stores/prefetchService";
 
 type DiscoverSong = {
   id: string;
@@ -52,8 +54,6 @@ const DISCOVER_GENRES = [
 export default function Discover() {
   const [data, setData] = useState<DiscoverResponse | null>(null);
   const [genre, setGenre] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [optimistic, setOptimistic] = useState<
     Record<string, { like_count: number; liked_by_me: boolean; play_count?: number }>
   >({});
@@ -83,21 +83,18 @@ export default function Discover() {
   const addToMenuRef = useRef<HTMLDivElement | null>(null);
   const [addToMenuPosition, setAddToMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    api
-      .discover({ genre: genre || undefined, limit: 20 })
-      .then(setData)
-      .catch((e: any) => setError(e?.message || "Failed to load discover feed"))
-      .finally(() => setLoading(false));
-  }, [genre]);
+  // Serve cached discover data immediately if available;
+  // background revalidation keeps data fresh.
+  const { data: discoverData, isLoading: discoverLoading, error: discoverError } = usePrefetch(
+    genre ? `discover:${genre}` : PREFETCH_DISCOVER,
+    () => api.discover({ genre: genre || undefined, limit: 20 }),
+    { maxAgeMs: 60_000 }
+  );
 
-  // Reset popular songs pagination and layout when genre changes
+  // Sync local data state when prefetched data arrives.
   useEffect(() => {
-    setShowAllPopularSongs(false);
-    setPopularPage(1);
-  }, [genre]);
+    if (discoverData) setData(discoverData);
+  }, [discoverData]);
 
   // Subscribe to player store to track currently playing song
   useEffect(() => {
@@ -387,13 +384,13 @@ export default function Discover() {
             </div>
           </div>
 
-          {loading && <div className="mt-4 text-sm text-gray-300">Loading discover feed…</div>}
-          {error && !loading && <div className="mt-4 text-sm text-red-300">{error}</div>}
-          {!loading && !error && !popularSongs.length && (
+          {discoverLoading && <div className="mt-4 text-sm text-gray-300">Loading discover feed…</div>}
+          {discoverError && !discoverLoading && <div className="mt-4 text-sm text-red-300">{String(discoverError)}</div>}
+          {!discoverLoading && !discoverError && !popularSongs.length && (
             <div className="mt-4 text-xs text-gray-400">No AI songs shared yet. Be the first to generate and share one.</div>
           )}
 
-          {!loading && !error && popularSongs.length > 0 && (
+          {!discoverLoading && !discoverError && popularSongs.length > 0 && (
             <>
               {/* Popular Songs */}
               <section className="mt-5">

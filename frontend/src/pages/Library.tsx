@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { api, type Playlist } from "../lib/api";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
-import SongDetailSidebar from "../components/song/SongDetailSidebar";
-import SongCard from "../components/song/SongCard";
+import { SongDetailSidebar } from "../components/song/SongDetailSidebar";
+import { SongCard } from "../components/song/SongCard";
+import { usePrefetch } from "../stores/usePrefetch";
+import { PREFETCH_LIBRARY } from "../stores/prefetchService";
 
 type SongRow = {
   id: string;
@@ -35,9 +37,7 @@ const LIBRARY_GENRES = [
 ] as const;
 
 export default function Library() {
-  const [songs, setSongs] = useState<SongRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [genre, setGenre] = useState("");
@@ -50,6 +50,32 @@ export default function Library() {
   const [likingId, setLikingId] = useState<string | null>(null);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
+
+  // songs: local mutable copy — starts empty, syncs when libraryData arrives,
+  // and stays local so optimistic mutations don't touch the cache.
+  const [songs, setSongs] = useState<SongRow[]>([]);
+
+  // Composite cache key so each unique filter combination is cached independently.
+  const libraryKey = `library:${order}:${genre || "(all)"}:${q || "(all)"}`;
+
+  // usePrefetch gives us immediate cached data + background revalidation.
+  const { data: libraryData, isLoading: libraryLoading, error: libraryError } = usePrefetch(
+    libraryKey,
+    () =>
+      api.listSongs({
+        q: q || undefined,
+        genre: genre || undefined,
+        order,
+      }),
+    { loadingOnlyWhenEmpty: false }
+  );
+
+  // Sync local state when prefetched data arrives.
+  useEffect(() => {
+    if (libraryData !== undefined) {
+      setSongs(libraryData);
+    }
+  }, [libraryData]);
 
   const handlePlaySong = (song: SongRow) => {
     if (!song.audio_url) return;
@@ -121,19 +147,6 @@ export default function Library() {
       setLikingId(null);
     }
   };
-
-  useEffect(() => {
-    setLoading(true);
-    api
-      .listSongs({
-        q: q || undefined,
-        genre: genre || undefined,
-        order
-      })
-      .then(setSongs)
-      .catch((e: any) => setErr(e?.message || "Failed to load songs"))
-      .finally(() => setLoading(false));
-  }, [q, genre, order]);
 
   // Subscribe to player store to track currently playing song
   useEffect(() => {
@@ -235,9 +248,10 @@ export default function Library() {
           </div>
         </div>
 
-        {loading ? <div className="text-gray-300">Loading…</div> : null}
+        {libraryLoading ? <div className="text-gray-300">Loading…</div> : null}
+        {libraryError && !libraryLoading ? <div className="mt-2 text-sm text-red-300">{String(libraryError)}</div> : null}
         {err ? <div className="mt-2 text-sm text-red-300">{err}</div> : null}
-        {!loading && !err && songs.length === 0 ? <div className="mt-2 text-gray-400">No AI songs generated yet. Start creating your first AI song!</div> : null}
+        {!libraryLoading && !libraryError && !err && songs.length === 0 ? <div className="mt-2 text-gray-400">No AI songs generated yet. Start creating your first AI song!</div> : null}
 
         <div className="mt-4 grid gap-3">
           {songs.map((s) => {

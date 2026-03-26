@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSyncExternalStore } from "react";
 import { clearTokens, getAccessToken, subscribeAuth } from "../../lib/auth";
 import { api } from "../../lib/api";
+import { prefetchService } from "../../stores/prefetchService";
 
 interface SidebarProps {
   width: number;
@@ -173,6 +174,7 @@ export default function Sidebar({ width, onWidthChange }: SidebarProps) {
             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
             onClick={() => {
               clearTokens();
+              prefetchService.clear();
               nav("/login");
             }}
           >

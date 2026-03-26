@@ -5,6 +5,8 @@ import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 import SongCard from "../components/song/SongCard";
 import SongDetailSidebar from "../components/song/SongDetailSidebar";
+import { prefetchStore } from "../stores/prefetchStore";
+import { PREFETCH_CURRENT_USER } from "../stores/prefetchService";
 
 type Song = {
   id: string;
@@ -77,7 +79,33 @@ export default function Profile() {
     const loadData = async () => {
       setLoading(true);
       setErr(null);
-      
+
+      // 1. Try prefetch cache first for instant display
+      const cachedMe = prefetchStore.get<{
+        id: string;
+        username: string;
+        email: string;
+        credits_balance: number;
+        details?: string | null;
+        avatar_url?: string | null;
+        background_url?: string | null;
+        followers_count?: number;
+        following_count?: number;
+      }>(PREFETCH_CURRENT_USER);
+      if (cachedMe.data) {
+        setCurrentUser({
+          id: cachedMe.data.id,
+          username: cachedMe.data.username,
+          email: cachedMe.data.email,
+          credits_balance: cachedMe.data.credits_balance,
+          avatar_url: cachedMe.data.avatar_url || null,
+          background_url: cachedMe.data.background_url || null,
+          details: cachedMe.data.details || null,
+          followers_count: cachedMe.data.followers_count,
+          following_count: cachedMe.data.following_count,
+        });
+      }
+
       try {
         // Always try to get current user (if authenticated)
         const me = await api.me();

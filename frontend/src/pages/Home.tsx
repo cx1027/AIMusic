@@ -6,6 +6,8 @@ import { PopularArtistCard } from "../components/discover/PopularArtistCard";
 import { inferGenresFromPrompt } from "../lib/genres";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
+import { usePrefetch } from "../stores/usePrefetch";
+import { PREFETCH_DISCOVER } from "../stores/prefetchService";
 import { Music, Download, Sparkles, ArrowRight, Smartphone } from "lucide-react";
 
 type DiscoverSong = {
@@ -27,9 +29,15 @@ type DiscoverSong = {
 };
 
 export default function Home() {
-  const [trending, setTrending] = useState<DiscoverSong[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Serve cached discover data immediately if available;
+  // fall back to a network request if not.
+  const { data: discoverData, isLoading: discoverLoading, error: discoverError } = usePrefetch(
+    PREFETCH_DISCOVER,
+    () => api.discover({ limit: 16 }),
+    { maxAgeMs: 60_000 }
+  );
+  const trending = discoverData?.trending ?? [];
+
   const [optimistic, setOptimistic] = useState<
     Record<string, { like_count: number; liked_by_me: boolean; play_count?: number }>
   >({});
@@ -71,18 +79,6 @@ export default function Home() {
     .filter((s) => s.cover_image_url)
     .slice(0, 20)
     .map((s) => resolveMediaUrl(s.cover_image_url));
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    api
-      .discover({ limit: 16 })
-      .then((res) => {
-        setTrending(res.trending);
-      })
-      .catch((e: any) => setError(e?.message || "Failed to load popular feed"))
-      .finally(() => setLoading(false));
-  }, []);
 
   // Subscribe to player store to track currently playing song
   useEffect(() => {
@@ -340,15 +336,15 @@ export default function Home() {
             </Link>
           </div>
 
-          {loading && <div className="text-sm text-slate-300">Loading popular songs…</div>}
-          {error && !loading && <div className="text-sm text-red-300">{error}</div>}
-          {!loading && !error && !trending.length && (
+          {discoverLoading && <div className="text-sm text-slate-300">Loading popular songs…</div>}
+          {discoverError && !discoverLoading && <div className="text-sm text-red-300">{String(discoverError)}</div>}
+          {!discoverLoading && !discoverError && !trending.length && (
             <div className="text-sm text-slate-400">
               No AI songs shared yet. Be the first to generate and share one.
             </div>
           )}
 
-          {!loading && !error && trending.length > 0 && (
+          {!discoverLoading && !discoverError && trending.length > 0 && (
             <div className="flex gap-4 overflow-x-auto pb-4">
               {trending.slice(0, 6).map((s) => {
                 const state = optimistic[s.id] ?? {
@@ -426,13 +422,13 @@ export default function Home() {
             </Link>
           </div>
 
-          {loading && <div className="text-sm text-slate-300">Finding standout artists…</div>}
-          {error && !loading && <div className="text-sm text-red-300">{error}</div>}
-          {!loading && !error && !popularArtists.length && (
+          {discoverLoading && <div className="text-sm text-slate-300">Finding standout artists…</div>}
+          {discoverError && !discoverLoading && <div className="text-sm text-red-300">{String(discoverError)}</div>}
+          {!discoverLoading && !discoverError && !popularArtists.length && (
             <div className="text-sm text-slate-400">Top creators will appear here as AI songs get likes and shares.</div>
           )}
 
-          {!loading && !error && popularArtists.length > 0 && (
+          {!discoverLoading && !discoverError && popularArtists.length > 0 && (
             <div className="flex gap-4 overflow-x-auto pb-4">
               {popularArtists.map((artist) => (
                 <div key={artist.username} className="w-[160px] flex-shrink-0">
