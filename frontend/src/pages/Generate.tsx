@@ -27,7 +27,7 @@ export default function Generate() {
   
   // Optional parameters
   const [thinking, setThinking] = useState<boolean>(true);
-  const [audioDuration, setAudioDuration] = useState<number>(60);
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [bpm, setBpm] = useState<number | null>(null);
   const [vocalLanguage, setVocalLanguage] = useState<string>("en");
   const [audioFormat, setAudioFormat] = useState<string>("mp3");
@@ -135,12 +135,15 @@ export default function Generate() {
         title: title.trim() ? title.trim() : null,
         genre: genreString,
         thinking,
-        audio_duration: audioDuration,
         vocal_language: vocalLanguage,
         audio_format: audioFormat,
         inference_steps: inferenceSteps,
         batch_size: batchSize,
       };
+      
+      if (audioDuration !== null) {
+        payload.audio_duration = audioDuration;
+      }
       
       if (mode === "simple") {
         payload.sample_query = sampleQuery.trim();
@@ -380,17 +383,27 @@ export default function Generate() {
           {/* Audio Duration - between Genre tags and More Options */}
           <div className="space-y-1">
             <label className="text-sm text-gray-200">
-              Audio Duration (s) <span className="text-gray-400">*</span>
+              Audio Duration (s)
             </label>
-            <input
-              type="number"
-              min={10}
-              max={600}
-              value={audioDuration}
-              onChange={(e) => setAudioDuration(parseInt(e.target.value || "60", 10))}
+            <select
+              value={audioDuration ?? "auto"}
+              onChange={(e) => setAudioDuration(e.target.value === "auto" ? null : parseInt(e.target.value, 10))}
               className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 outline-none focus:border-white/30"
-            />
-            <p className="text-xs text-gray-400">10-600 seconds</p>
+            >
+              <option value="auto">Auto</option>
+              <option value="30">30</option>
+              <option value="60">60</option>
+              <option value="90">90</option>
+              <option value="120">120</option>
+              <option value="180">180</option>
+              <option value="240">240</option>
+              <option value="300">300</option>
+            </select>
+            <p className="text-xs text-gray-400">
+              {audioDuration === null
+                ? "Auto: duration will be inferred by the model"
+                : `${audioDuration} seconds`}
+            </p>
           </div>
 
           {/* More Options (expand/collapse) */}

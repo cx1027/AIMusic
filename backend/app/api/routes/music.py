@@ -114,13 +114,13 @@ def music_generate(
     thinking = bool(payload.get("thinking", True))
     instrumental = bool(payload.get("instrumental", False))
     # Support both `audio_duration` (frontend) and `duration` (common RunPod examples)
-    audio_duration = payload.get("audio_duration", payload.get("duration", 60))
+    audio_duration = payload.get("audio_duration", payload.get("duration", -1))
     try:
         audio_duration_int = int(audio_duration)
     except Exception:
         raise HTTPException(status_code=400, detail="audio_duration must be an integer")
-    if audio_duration_int < 10 or audio_duration_int > 600:
-        raise HTTPException(status_code=400, detail="audio_duration out of range (10-600)")
+    if audio_duration_int != -1 and (audio_duration_int < 10 or audio_duration_int > 600):
+        raise HTTPException(status_code=400, detail="audio_duration out of range (10-600, or -1 for auto)")
 
     bpm = payload.get("bpm")
     bpm_int_raw = _coerce_int(bpm, default=140)

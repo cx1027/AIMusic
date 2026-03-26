@@ -26,7 +26,7 @@ class GenerateRequestPayload(Dict[str, Any]):
       - mode: str ("simple" or "custom") - required
       - For simple mode: sample_query (required)
       - For custom mode: prompt (required), lyrics (optional)
-      - Optional: thinking, audio_duration, bpm, vocal_language, audio_format, inference_steps, batch_size
+      - Optional: thinking, audio_duration (-1 or 10-600), bpm, vocal_language, audio_format, inference_steps, batch_size
       - title: Optional[str]
       - genre: Optional[str]
     """
@@ -84,13 +84,16 @@ def create_generation(
     
     instrumental = bool(payload.get("instrumental", False))
 
-    audio_duration = payload.get("audio_duration", 60)
-    try:
-        audio_duration_int = int(audio_duration)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration must be an integer")
-    if audio_duration_int < 10 or audio_duration_int > 600:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration out of range (10-600)")
+    audio_duration = payload.get("audio_duration")
+    if audio_duration is None:
+        audio_duration_int = -1
+    else:
+        try:
+            audio_duration_int = int(audio_duration)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration must be an integer")
+        if audio_duration_int != -1 and (audio_duration_int < 10 or audio_duration_int > 600):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="audio_duration out of range (10-600, or -1 for auto)")
 
     bpm = payload.get("bpm")
     if bpm is not None:
