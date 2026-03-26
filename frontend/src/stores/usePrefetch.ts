@@ -19,7 +19,7 @@
  * and on the stale-while-revalidate timer.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { prefetchStore } from "./prefetchStore";
 
 type PrefetchCallback<T> = () => Promise<T>;
@@ -47,6 +47,12 @@ export function usePrefetch<T>(
 } {
   const { maxAgeMs, loadingOnlyWhenEmpty = true } = opts;
 
+  // Callers pass an inline `() => api.foo()` on every render; that new function
+  // reference must NOT be a useEffect dependency or we get an infinite loop
+  // (effect → fetch → setState → render → new fetcher → effect …).
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+
   const [entry, setEntry] = useState(() =>
     fetcher ? prefetchStore.get<T>(key, maxAgeMs) : { data: undefined, error: undefined, isLoading: false }
   );
@@ -62,10 +68,16 @@ export function usePrefetch<T>(
 
   // Trigger fetch (always — even if cache is populated, we want background revalidation)
   useEffect(() => {
-    if (!key || !fetcher) return;
+    if (!key || !fetcherRef.current) return;
+
+    const runFetcher = () => {
+      const fn = fetcherRef.current;
+      if (!fn) throw new Error("prefetch fetcher missing");
+      return fn();
+    };
 
     void prefetchStore
-      .fetch(key, fetcher, { maxAgeMs })
+      .fetch(key, runFetcher, { maxAgeMs })
       .then(() => {
         // Update state after the fetch completes (may cause an extra render)
         setEntry(prefetchStore.get<T>(key, maxAgeMs));
@@ -74,7 +86,7 @@ export function usePrefetch<T>(
         // Error is stored in cache; read it for display
         setEntry(prefetchStore.get<T>(key, maxAgeMs));
       });
-  }, [key, fetcher, maxAgeMs]);
+  }, [key, maxAgeMs]);
 
   const isLoading =
     loadingOnlyWhenEmpty
