@@ -85,6 +85,7 @@ def run_generation_task(
         effective_prompt = prompt or caption
         try:
             report(10, "calling ACE-Step API")
+            print("lyrics:", lyrics, "\n")
             api_params = AceStepApiParams(
                 mode=mode,
                 sample_query=sample_query,
@@ -93,7 +94,6 @@ def run_generation_task(
                 thinking=thinking,
                 audio_duration=audio_duration,
                 bpm=bpm,
-                vocal_language=vocal_language,
                 audio_format=audio_format,
                 inference_steps=inference_steps,
                 batch_size=batch_size,

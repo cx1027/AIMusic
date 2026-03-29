@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     ace_step_model_dir: str = "models/ace-step-1.5"
     ace_step_device: str = "mps"  # mps (Mac), cuda, cpu
 
+    # ACE-Step via Replicate API (https://replicate.com/fishaudio/ace-step-1.5)
+    replicate_api_token: str = ""
+
     # FLUX.1 Schnell image generation
     flux_schnell_provider: str = Field(
         default="runpod",

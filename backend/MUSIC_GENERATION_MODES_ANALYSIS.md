@@ -207,7 +207,7 @@ R2存储
 - ⚠️ **需要 ACE-Step API**: 需要单独运行 ACE-Step API 服务
 - ⚠️ **需要 Celery**: 需要运行 Celery worker
 
-### 方式3: Celery + 本地ACE-Step推理 (SSE模式，Fallback)
+### 方式3: Celery + 本地ACE-Step推理 (SSE模式，Fallback):已去掉
 - ✅ **自动回退**: API 失败时自动切换
 - ✅ **本地推理**: 不依赖外部 API
 - ⚠️ **需要模型文件**: 需要下载 ACE-Step 模型权重到 `backend/acestepapp/checkpoints`

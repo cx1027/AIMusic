@@ -64,10 +64,10 @@ def _log_runpod_input(*, mode: str, runpod_input: Dict[str, Any]) -> None:
 
 def _require_runpod_enabled() -> None:
     s = get_settings()
-    if (s.music_generation_backend or "celery").lower() != "runpod":
+    if (s.music_generation_backend or "").lower() not in ("runpod", "celery", "replicate"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="RunPod music generation is disabled. Set MUSIC_GENERATION_BACKEND=runpod",
+            detail="Invalid MUSIC_GENERATION_BACKEND. Must be 'celery', 'runpod', or 'replicate'.",
         )
 
 
