@@ -81,6 +81,9 @@ def run_generation_task(
 
         report(5, "starting")
         
+        # Track whether Replicate succeeded — None means fallback/local path was used
+        replicate_r2_url: str | None = None
+
         # Use ACE-Step API instead of local inference
         effective_prompt = prompt or caption
         try:
@@ -98,7 +101,7 @@ def run_generation_task(
                 inference_steps=inference_steps,
                 batch_size=batch_size,
             )
-            audio_bytes = generate_music_via_api(api_params, progress_cb=report)
+            audio_bytes, replicate_r2_url = generate_music_via_api(api_params, progress_cb=report)
             # API returns audio in the requested format (MP3, WAV, etc.)
             # For MusicGenResult, we use wav_bytes field but it can contain any audio format
             res_bpm = bpm if bpm else 120  # Use provided BPM or default
@@ -121,11 +124,18 @@ def run_generation_task(
 
         update_task(task_id, status="running", progress=60, message="uploading audio")
         print(f"[music_generation] Audio generation completed, uploading audio...", flush=True)
-        # Use the requested audio format for storage
-        suffix = f".{audio_format}"
-        content_type = f"audio/{audio_format}" if audio_format in ["mp3", "wav", "flac"] else "audio/mpeg"
-        stored = get_storage().store_bytes(content=res.wav_bytes, suffix=suffix, content_type=content_type)
-        print(f"[music_generation] Audio uploaded successfully: {stored.url}", flush=True)
+
+        # Use R2 URL directly from Replicate (already uploaded in ace_step_api_service)
+        # Fallback/local path still goes through store_bytes()
+        if replicate_r2_url is not None:
+            stored_url = replicate_r2_url
+            print(f"[music_generation] Audio already on R2: {stored_url}", flush=True)
+        else:
+            suffix = f".{audio_format}"
+            content_type = f"audio/{audio_format}" if audio_format in ["mp3", "wav", "flac"] else "audio/mpeg"
+            stored = get_storage().store_bytes(content=res.wav_bytes, suffix=suffix, content_type=content_type)
+            stored_url = stored.url
+            print(f"[music_generation] Audio uploaded successfully: {stored_url}", flush=True)
 
         # Generate cover image
         cover_image_url = None
@@ -176,7 +186,7 @@ def run_generation_task(
                 lyrics=lyrics,
                 duration=audio_duration,
                 bpm=res.bpm,
-                audio_url=stored.url,
+                audio_url=stored_url,
                 cover_image_url=cover_image_url,
                 genre=genre,
             )
@@ -186,7 +196,7 @@ def run_generation_task(
 
         result = {
             "song_id": str(song.id),
-            "audio_url": stored.url,
+            "audio_url": stored_url,
             "cover_image_url": cover_image_url,
         }
         # Always include cover_image_error if it exists to ensure frontend gets the info

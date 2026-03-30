@@ -9,6 +9,8 @@ from typing import Callable, Optional
 import replicate
 from dotenv import dotenv_values
 
+from app.services.storage_service import AudioStorageResult, get_storage
+
 logger = logging.getLogger(__name__)
 
 ProgressCb = Callable[[int, str], None]
@@ -113,20 +115,23 @@ def generate_music_via_api(
     *,
     progress_cb: Optional[ProgressCb] = None,
     api_base_url: Optional[str] = None,
-) -> bytes:
+) -> tuple[bytes, str]:
     """
-    Generate music using fishaudio/ace-step-1.5 via Replicate API.
+    Generate music using fishaudio/ace-step-1.5 via Replicate API,
+    then upload the result directly to R2 (or local storage).
 
     Uses replicate.run() which blocks until the prediction completes,
     polling internally — no manual polling loop needed.
 
     Args:
         params:         AceStepApiParams with generation settings.
-        progress_cb:     Optional (progress_pct: int, message: str) callback.
-        api_base_url:    Deprecated — kept for compatibility, ignored.
+        progress_cb:    Optional (progress_pct: int, message: str) callback.
+        api_base_url:   Deprecated — kept for compatibility, ignored.
 
     Returns:
-        Raw bytes of the generated audio (MP3/WAV/etc. per audio_format).
+        (audio_bytes, r2_url) where:
+          - audio_bytes: raw bytes of the generated audio (MP3/WAV/etc.)
+          - r2_url:      public R2/storage URL for direct playback
     """
     if api_base_url is not None:
         logger.warning("[ace_step_api_service] api_base_url is deprecated; using Replicate")
@@ -179,13 +184,25 @@ def generate_music_via_api(
 
         audio_file = output[0]
         audio_bytes = audio_file.read()
+        replicate_url = audio_file.url
         logger.info(f"[ace_step_api_service] Audio read, size: {len(audio_bytes)} bytes")
+        logger.info(f"[ace_step_api_service] Replicate URL: {replicate_url}")
     except AceStepApiError:
         raise
     except Exception as e:
         raise AceStepApiError(f"Failed to read prediction output: {str(e)}") from e
 
+    # Upload directly to R2 with date-based folder path
+    suffix = f".{params.audio_format}"
+    content_type = f"audio/{params.audio_format}" if params.audio_format in ["mp3", "wav", "flac"] else "audio/mpeg"
+    storage_result: AudioStorageResult = get_storage().upload_to_r2(
+        content=audio_bytes,
+        suffix=suffix,
+        content_type=content_type,
+    )
+    logger.info(f"[ace_step_api_service] R2 upload complete: {storage_result.r2_url}")
+
     if progress_cb:
         progress_cb(100, "replicate: completed")
 
-    return audio_bytes
+    return audio_bytes, storage_result.r2_url

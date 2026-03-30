@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from pathlib import Path
+from datetime import date, datetime
 from typing import Optional
 from uuid import uuid4
 
 import boto3
-
-from app.core.config import get_settings
 
 
 @dataclass
@@ -17,47 +15,138 @@ class StoredFile:
     url: str
 
 
-class StorageService:
-    def __init__(self) -> None:
-        self.settings = get_settings()
+@dataclass
+class AudioStorageResult:
+    bytes: bytes
+    r2_url: str
+    key: str
 
-    def store_bytes(self, *, content: bytes, suffix: str, content_type: str = "application/octet-stream") -> StoredFile:
-        backend = (self.settings.storage_backend or "local").lower()
-        if backend == "s3":
-            return self._store_s3(content=content, suffix=suffix, content_type=content_type)
-        return self._store_local(content=content, suffix=suffix)
 
-    def _store_local(self, *, content: bytes, suffix: str) -> StoredFile:
-        base = Path(self.settings.local_storage_dir)
-        base.mkdir(parents=True, exist_ok=True)
-        key = f"{uuid4().hex}{suffix}"
-        p = base / key
-        p.write_bytes(content)
-        # Served via backend route: /api/files/{key}
-        return StoredFile(key=key, url=f"{self.settings.api_prefix}/files/{key}")
+def _get_r2_config() -> tuple[str, str, str, str, str]:
+    """
+    Read R2 credentials from environment variables.
 
-    def _store_s3(self, *, content: bytes, suffix: str, content_type: str) -> StoredFile:
-        s = self.settings
-        if not (s.s3_bucket and s.s3_access_key_id and s.s3_secret_access_key):
-            raise RuntimeError("S3 backend selected but missing S3_BUCKET / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY")
-        key = f"audio/{uuid4().hex}{suffix}"
-        client = boto3.client(
-            "s3",
-            endpoint_url=s.s3_endpoint_url or None,
-            aws_access_key_id=s.s3_access_key_id,
-            aws_secret_access_key=s.s3_secret_access_key,
-            region_name=s.s3_region or None,
+    Raises RuntimeError with a clear message if any required variable is missing.
+    """
+    r2_endpoint = os.environ.get("R2_ENDPOINT", "").strip()
+    r2_access_key = os.environ.get("R2_ACCESS_KEY", "").strip()
+    r2_secret_key = os.environ.get("R2_SECRET_KEY", "").strip()
+    r2_bucket_name = os.environ.get("R2_BUCKET_NAME", "").strip()
+    r2_public_url = os.environ.get("R2_PUBLIC_URL", "").strip()
+
+    missing = []
+    if not r2_endpoint:
+        missing.append("R2_ENDPOINT")
+    if not r2_access_key:
+        missing.append("R2_ACCESS_KEY")
+    if not r2_secret_key:
+        missing.append("R2_SECRET_KEY")
+    if not r2_bucket_name:
+        missing.append("R2_BUCKET_NAME")
+
+    if missing:
+        raise RuntimeError(
+            f"R2 upload failed: missing required environment variables: {', '.join(missing)}. "
+            f"Ensure R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY, and R2_BUCKET_NAME are set in backend/.env."
         )
-        client.put_object(Bucket=s.s3_bucket, Key=key, Body=content, ContentType=content_type)
 
-        # If you use R2/S3 private buckets, swap to signed URLs here.
-        public_base = os.getenv("S3_PUBLIC_BASE_URL", "").rstrip("/")
-        if public_base:
-            url = f"{public_base}/{key}"
-        else:
-            # Fallback (may not be publicly accessible depending on provider)
-            url = f"{s.s3_endpoint_url.rstrip('/')}/{s.s3_bucket}/{key}" if s.s3_endpoint_url else f"s3://{s.s3_bucket}/{key}"
+    return r2_endpoint, r2_access_key, r2_secret_key, r2_bucket_name, r2_public_url
+
+
+def _upload_bytes_to_r2(
+    content: bytes,
+    key: str,
+    content_type: str,
+) -> str:
+    """
+    Upload bytes to R2 using the S3-compatible API.
+    Returns the public URL of the uploaded file.
+    Raises RuntimeError on any R2 error.
+    """
+    r2_endpoint, r2_access_key, r2_secret_key, r2_bucket_name, r2_public_url = _get_r2_config()
+
+    client = boto3.client(
+        "s3",
+        endpoint_url=r2_endpoint,
+        aws_access_key_id=r2_access_key,
+        aws_secret_access_key=r2_secret_key,
+        region_name="auto",
+    )
+    try:
+        client.put_object(
+            Bucket=r2_bucket_name,
+            Key=key,
+            Body=content,
+            ContentType=content_type,
+        )
+    except Exception as e:
+        raise RuntimeError(f"R2 upload failed for key '{key}': {type(e).__name__}: {e}") from e
+
+    if r2_public_url:
+        return f"{r2_public_url}/{key}"
+    return f"{r2_bucket_name}.r2.dev/{key}"
+
+
+class StorageService:
+    def store_bytes(
+        self,
+        *,
+        content: bytes,
+        suffix: str,
+        content_type: str = "application/octet-stream",
+        folder: str = "audio",
+    ) -> StoredFile:
+        """
+        Upload arbitrary bytes to R2.
+
+        Args:
+            content:       Raw bytes to upload.
+            suffix:        File suffix (e.g. ".mp3", ".png").
+            content_type:  MIME type for the Content-Type header.
+            folder:        Top-level folder key in R2 (default "audio").
+
+        Returns:
+            StoredFile with the R2 public URL.
+
+        Raises:
+            RuntimeError if R2 credentials are missing or upload fails.
+        """
+        key = f"{folder}/{uuid4().hex}{suffix}"
+        url = _upload_bytes_to_r2(content=content, key=key, content_type=content_type)
         return StoredFile(key=key, url=url)
+
+    def upload_to_r2(
+        self,
+        content: bytes,
+        suffix: str,
+        content_type: str = "audio/mpeg",
+        *,
+        folder_date: Optional[date] = None,
+    ) -> AudioStorageResult:
+        """
+        Upload audio bytes to R2 with a date-based folder path.
+
+        Key format: songs/{YYYY-MM-DD}/{uuid}{suffix}
+
+        Args:
+            content:       Raw audio bytes.
+            suffix:        File suffix (e.g. ".mp3").
+            content_type:  MIME type for the Content-Type header.
+            folder_date:   Date used for the folder path; defaults to today.
+
+        Returns:
+            AudioStorageResult with bytes, r2_url, and key.
+
+        Raises:
+            RuntimeError if R2 credentials are missing or upload fails.
+        """
+        if folder_date is None:
+            folder_date = datetime.now().date()
+
+        date_str = folder_date.strftime("%Y-%m-%d")
+        key = f"songs/{date_str}/{uuid4().hex}{suffix}"
+        url = _upload_bytes_to_r2(content=content, key=key, content_type=content_type)
+        return AudioStorageResult(bytes=content, r2_url=url, key=key)
 
 
 _storage: Optional[StorageService] = None
@@ -72,28 +161,24 @@ def get_storage() -> StorageService:
 
 def get_signed_url(key: str, *, ttl_seconds: int = 600) -> str:
     """
-    Return a short-lived signed URL for S3/R2 objects.
-    Local backend should directly serve files via /api/files/{key}.
-    """
-    s = get_settings()
-    backend = (s.storage_backend or "local").lower()
-    if backend != "s3":
-        raise RuntimeError("Signed URLs only supported for S3 backend")
+    Return a short-lived signed URL for an R2 object.
 
-    if not (s.s3_bucket and s.s3_access_key_id and s.s3_secret_access_key):
-        raise RuntimeError("Missing S3 configuration for signed URLs")
+    Raises RuntimeError if R2 credentials are missing or signing fails.
+    """
+    r2_endpoint, r2_access_key, r2_secret_key, r2_bucket_name, _ = _get_r2_config()
 
     client = boto3.client(
         "s3",
-        endpoint_url=s.s3_endpoint_url or None,
-        aws_access_key_id=s.s3_access_key_id,
-        aws_secret_access_key=s.s3_secret_access_key,
-        region_name=s.s3_region or None,
+        endpoint_url=r2_endpoint,
+        aws_access_key_id=r2_access_key,
+        aws_secret_access_key=r2_secret_key,
+        region_name="auto",
     )
-    return client.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": s.s3_bucket, "Key": key},
-        ExpiresIn=ttl_seconds,
-    )
-
-
+    try:
+        return client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": r2_bucket_name, "Key": key},
+            ExpiresIn=ttl_seconds,
+        )
+    except Exception as e:
+        raise RuntimeError(f"R2 signed URL generation failed for key '{key}': {type(e).__name__}: {e}") from e

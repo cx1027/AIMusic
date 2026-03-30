@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env into os.environ before any other import that may read env vars directly
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 from celery import Celery
 
 from app.core.config import get_settings
