@@ -88,9 +88,10 @@ def run_generation_task(
         # Use ACE-Step API instead of local inference
         effective_prompt = prompt or caption
         try:
-            report(10, "calling ACE-Step API")
+            print(f"lyrics: {lyrics}, instrumental: {instrumental}", flush=True)
             print("lyrics:", lyrics, "\n")
             api_params = AceStepApiParams(
+                instrumental=instrumental,
                 mode=mode,
                 sample_query=sample_query,
                 prompt=effective_prompt,

@@ -21,12 +21,20 @@ ACE_STEP_MODEL_VERSION = "74e3a7d383b18815e277de5223f5fe9d53d38832de15aa567fe729
 
 @dataclass
 class AceStepApiParams:
-    """Parameters for ACE-Step generation via Replicate."""
+    """Parameters for ACE-Step generation via Replicate.
+
+
+    Two modes:
+      - "simple":  sample_query as prompt. instrumental=True → [Instrumental];
+                    instrumental=False → LLM expands into caption + lyrics + metas.
+      - "custom":  User provides prompt (caption) and lyrics (lyrics).
+    """
     # Mode selection
-    mode: str  # "simple" or "custom"
+    mode: str  # "simple" | "custom"
 
     # Simple mode (required when mode="simple")
     sample_query: Optional[str] = None
+    instrumental: bool = False  # True → [Instrumental], False → LLM expand
 
     # Custom mode (required when mode="custom")
     prompt: Optional[str] = None
@@ -136,26 +144,80 @@ def generate_music_via_api(
     if api_base_url is not None:
         logger.warning("[ace_step_api_service] api_base_url is deprecated; using Replicate")
 
-    # Validate mode
+    # ── Mode routing ────────────────────────────────────────────────────────────
+    # simple + instrumental=True  → [Instrumental]
+    # simple + instrumental=False → LLM expand sample_query into caption + lyrics + metas
+    # custom                       → user caption + lyrics
+    caption: str = ""
+    lyrics_str: str = ""
+    bpm: Optional[int] = None
+    key_scale: str = ""
+    duration: int = params.audio_duration
+
     if params.mode == "simple":
         if not params.sample_query:
             raise AceStepApiError("sample_query is required for simple mode")
-        tags = params.sample_query
-        lyrics_str = "[Instrumental]"  # simple = instrumental
+        caption = params.sample_query
+        if params.instrumental:
+            # Instrumental only — no LLM needed
+            lyrics_str = "[Instrumental]"
+        else:
+            # LLM expands sample_query into caption + lyrics + metadata
+            from app.services.llm_client import LlmClientError, expand_sample_query
+            if progress_cb:
+                progress_cb(3, "llm: expanding sample_query via Claude")
+            try:
+                llm_result = expand_sample_query(
+                    params.sample_query,
+                    progress_cb=progress_cb,
+                )
+            except LlmClientError as e:
+                raise AceStepApiError(f"LLM expansion failed: {e}") from e
+
+            caption = llm_result.caption
+            lyrics_str = llm_result.lyrics
+            bpm = llm_result.bpm
+            key_scale = llm_result.key_scale
+            if llm_result.duration is not None:
+                duration = llm_result.duration
+            print(
+                f"[ace_step_api_service] sample_query LLM expansion:\n"
+                f"  caption    = {caption}\n"
+                f"  lyrics     = {lyrics_str}\n"
+                f"  bpm       = {bpm}\n"
+                f"  key_scale = {key_scale}\n"
+                f"  duration  = {duration}",
+                flush=True,
+            )
+            if progress_cb:
+                progress_cb(5, "llm: expansion done, submitting to Replicate")
+
     elif params.mode == "custom":
         if not params.prompt:
-            raise AceStepApiError("prompt is required for custom mode")
-        tags = params.prompt
+            raise AceStepApiError("prompt (caption) is required for custom mode")
+        caption = params.prompt
         lyrics_str = params.lyrics or ""
-    else:
-        raise AceStepApiError(f"Invalid mode: {params.mode}. Must be 'simple' or 'custom'")
 
+    else:
+        raise AceStepApiError(
+            f"Invalid mode: {params.mode}. Must be 'simple' or 'custom'"
+        )
+
+    # ── Build Replicate input ───────────────────────────────────────────────────
     inp = _build_replicate_input(params)
-    inp["prompt"] = tags
+    inp["prompt"] = caption
     inp["lyrics"] = lyrics_str
 
+    # Override metadata when set by LLM (sample_query mode)
+    if bpm is not None:
+        inp["bpm"] = bpm
+    if key_scale:
+        inp["key_scale"] = key_scale
+    if duration != params.audio_duration:
+        inp["duration"] = duration
+
     logger.info(f"[ace_step_api_service] Submitting {params.mode} mode to Replicate ace-step-1.5")
-    logger.debug(f"[ace_step_api_service] Input: {inp}")
+    print(f"[ace_step_api_service] Replicate input: {inp}", flush=True)
 
     if progress_cb:
         progress_cb(5, "replicate: preparing request")
