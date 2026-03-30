@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import logging
-import time
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Optional
 
-import httpx
 import replicate
-
-from app.core.config import get_settings
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +50,18 @@ class AceStepApiError(RuntimeError):
 
 
 def _get_replicate_token() -> str:
-    """Get Replicate API token from settings."""
-    settings = get_settings()
-    token = settings.replicate_api_token or ""
+    """Get Replicate API token directly from backend/.env file and set it as env var."""
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    env_vars = dotenv_values(env_path)
+    token = env_vars.get("REPLICATE_API_TOKEN", "")
     if not token:
         raise AceStepApiError(
             "REPLICATE_API_TOKEN is required.\n"
-            "Set REPLICATE_API_TOKEN in your .env file.\n"
+            "Set REPLICATE_API_TOKEN in your backend/.env file.\n"
             "Get your token from: https://replicate.com/account/api-tokens"
         )
+    # replicate.run() reads REPLICATE_API_TOKEN from env, not from replicate.api_token
+    os.environ["REPLICATE_API_TOKEN"] = token
     return token
 
 
@@ -115,10 +117,8 @@ def generate_music_via_api(
     """
     Generate music using fishaudio/ace-step-1.5 via Replicate API.
 
-    Workflow:
-    1. Create Replicate prediction
-    2. Poll until succeeded/failed
-    3. Download audio from returned URI
+    Uses replicate.run() which blocks until the prediction completes,
+    polling internally — no manual polling loop needed.
 
     Args:
         params:         AceStepApiParams with generation settings.
@@ -158,100 +158,34 @@ def generate_music_via_api(
     api_token = _get_replicate_token()
 
     try:
-        replicate.api_token = api_token
+        print(f"[INFO] replicate.run called with inp={inp}") 
         if progress_cb:
-            progress_cb(10, "replicate: starting prediction")
-        prediction = replicate.predictions.create(
-            version=ACE_STEP_MODEL_VERSION,
+            progress_cb(10, "replicate: running prediction")
+
+        output = replicate.run(
+            f"fishaudio/ace-step-1.5:{ACE_STEP_MODEL_VERSION}",
             input=inp,
         )
-        logger.info(f"[ace_step_api_service] Prediction created: {prediction.id}")
-    except Exception as e:
-        raise AceStepApiError(f"Failed to create Replicate prediction: {str(e)}") from e
-
-    if progress_cb:
-        progress_cb(15, f"replicate: queued (id: {prediction.id[:8]}...)")
-
-    # Poll for completion
-    max_attempts = 120
-    poll_interval = 5
-
-    for attempt in range(max_attempts):
-        try:
-            prediction.reload()
-            status = prediction.status
-            logger.debug(f"[ace_step_api_service] Poll {attempt + 1}: status={status}")
-        except Exception as e:
-            logger.warning(f"[ace_step_api_service] Poll {attempt + 1} failed: {str(e)}")
-            time.sleep(poll_interval)
-            continue
-
-        if status == "succeeded":
-            logger.info("[ace_step_api_service] Prediction succeeded")
-            if progress_cb:
-                progress_cb(80, "replicate: completed")
-            break
-        elif status == "failed":
-            error_detail = ""
-            try:
-                error_detail = str(prediction.error) if prediction.error else "Unknown error"
-            except Exception:
-                pass
-            logger.error(f"[ace_step_api_service] Prediction failed: {error_detail}")
-            raise AceStepApiError(f"Replicate prediction failed: {error_detail}")
-        elif status in ("starting", "queued"):
-            if progress_cb:
-                progress_cb(15 + min(60, attempt * 2), f"replicate: {status} (attempt {attempt + 1})")
-            time.sleep(poll_interval)
-        elif status == "processing":
-            if progress_cb:
-                progress_cb(25 + min(55, attempt * 3), f"replicate: processing (attempt {attempt + 1})")
-            time.sleep(poll_interval)
-        else:
-            logger.warning(f"[ace_step_api_service] Unknown status: {status}")
-            time.sleep(poll_interval)
-    else:
-        raise AceStepApiError(f"Prediction timed out after {max_attempts * poll_interval} seconds")
-
-    # Parse output — official schema: array of URI strings
-    try:
-        output = prediction.output
+        print("!!!!!!!!!!!!output")
+        print(output[0].url)
         logger.info(f"[ace_step_api_service] Prediction output: {output}")
+    except Exception as e:
+        raise AceStepApiError(f"Replicate prediction failed: {str(e)}") from e
 
-        if output is None:
-            raise AceStepApiError("No output received from Replicate prediction")
-        if isinstance(output, list) and len(output) == 0:
-            raise AceStepApiError("Empty output array from Replicate prediction")
+    # Parse output — replicate.run returns a list of file objects
+    try:
+        if not isinstance(output, list) or len(output) == 0:
+            raise AceStepApiError("Unexpected output from Replicate: expected non-empty list")
 
-        # Output is an array of URIs
-        if isinstance(output, list):
-            audio_url = output[0]
-        else:
-            audio_url = output  # single URI string
-
-        if not audio_url:
-            raise AceStepApiError("Empty audio URL in prediction output")
-
-        logger.info(f"[ace_step_api_service] Downloading audio from: {audio_url}")
+        audio_file = output[0]
+        audio_bytes = audio_file.read()
+        logger.info(f"[ace_step_api_service] Audio read, size: {len(audio_bytes)} bytes")
     except AceStepApiError:
         raise
     except Exception as e:
-        raise AceStepApiError(f"Failed to get prediction output: {str(e)}") from e
-
-    # Download the audio file
-    if progress_cb:
-        progress_cb(85, "replicate: downloading audio")
-
-    try:
-        response = httpx.get(audio_url, timeout=120.0)
-        response.raise_for_status()
-        audio_bytes = response.content
-    except httpx.HTTPError as e:
-        raise AceStepApiError(f"Failed to download audio file: {str(e)}") from e
-
-    logger.info(f"[ace_step_api_service] Audio downloaded, size: {len(audio_bytes)} bytes")
+        raise AceStepApiError(f"Failed to read prediction output: {str(e)}") from e
 
     if progress_cb:
-        progress_cb(95, "replicate: audio downloaded")
+        progress_cb(100, "replicate: completed")
 
     return audio_bytes
