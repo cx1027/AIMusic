@@ -32,3 +32,6 @@ Pillow>=10.0.0
 
 # Optional provider used by cover image generation (when FLUXSCHNELL=huggingface)
 huggingface_hub>=0.20.0
+
+# AI Model APIs
+replicate>=0.25.0
