@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from sqlmodel import Session
@@ -154,7 +155,7 @@ def run_generation_task(
             print(f"[music_generation] generate_cover_image returned successfully", flush=True)
             print(f"[music_generation] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
             report(80, "uploading cover image")
-            cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+            cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png", folder=f"image/{date.today().isoformat()}")
             cover_image_url = cover_stored.url
             print(f"[music_generation] Cover image uploaded: {cover_image_url}", flush=True)
         except FluxNotInstalledError as e:

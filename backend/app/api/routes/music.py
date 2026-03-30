@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import date
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
@@ -336,7 +337,7 @@ def _finalize_runpod_job(
                     print(f"[music_status] Downloading from: {cover_image_url}", flush=True)
                     image_bytes = download_image_from_url(cover_image_url)
                     print(f"[music_status] Cover image downloaded successfully, size: {len(image_bytes)} bytes", flush=True)
-                    cover_stored = get_storage().store_bytes(content=image_bytes, suffix=".png", content_type="image/png")
+                    cover_stored = get_storage().store_bytes(content=image_bytes, suffix=".png", content_type="image/png", folder=f"image/{date.today().isoformat()}")
                     final_cover_image_url = cover_stored.url
                     print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
                 except Exception as e:
@@ -349,7 +350,7 @@ def _finalize_runpod_job(
                     try:
                         cover_res = generate_cover_image(prompt=cover_prompt, title=title)
                         print(f"[music_status] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
-                        cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+                        cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png", folder=f"image/{date.today().isoformat()}")
                         final_cover_image_url = cover_stored.url
                         print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
                         cover_image_error = None  # Clear error since fallback succeeded
@@ -365,7 +366,7 @@ def _finalize_runpod_job(
                 print(f"[music_status] Calling generate_cover_image...", flush=True)
                 cover_res = generate_cover_image(prompt=cover_prompt, title=title)
                 print(f"[music_status] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
-                cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png")
+                cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png", folder=f"image/{date.today().isoformat()}")
                 final_cover_image_url = cover_stored.url
                 print(f"[music_status] Cover image uploaded: {final_cover_image_url}", flush=True)
             except FluxNotInstalledError as e:
