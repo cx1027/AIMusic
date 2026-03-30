@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from uuid import UUID
 
@@ -27,7 +28,7 @@ def run_generation_task(
     caption: str | None = None,
     prompt: str | None = None,
     sample_query: str | None = None,
-    lyrics: str | None = None,
+    o3ics: str | None = None,
     audio_duration: int = 60,
     thinking: bool = True,
     bpm: int | None = None,
@@ -87,15 +88,34 @@ def run_generation_task(
 
         # Use ACE-Step API instead of local inference
         effective_prompt = prompt or caption
-        try:
-            print(f"lyrics: {lyrics}, instrumental: {instrumental}", flush=True)
-            print("lyrics:", lyrics, "\n")
+
+        # Prepare cover image parameters
+        cover_prompt = (caption or prompt) if mode == "custom" else (sample_query or "Generated music")
+        print(f"[music_generation] ========== STARTING CONCURRENT GENERATION ==========", flush=True)
+        print(f"[music_generation] Cover prompt: '{cover_prompt[:100] if cover_prompt else 'N/A'}...'", flush=True)
+        print(f"[music_generation] Cover title: '{title}'", flush=True)
+
+        # Concurrent audio and cover image generation
+        res = None
+        cover_res = None
+        cover_image_error = None
+
+        def audio_progress_cb(pct: int, msg: str) -> None:
+            # Audio takes 0-60% progress
+            report(int(pct * 0.6), msg)
+
+        def cover_progress_cb(pct: int, msg: str) -> None:
+            # Cover image takes 60-85% progress
+            report(60 + int(pct * 0.25), msg)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            # Submit audio generation task
             api_params = AceStepApiParams(
                 instrumental=instrumental,
                 mode=mode,
                 sample_query=sample_query,
                 prompt=effective_prompt,
-                lyrics=lyrics,
+                o3ics=o3ics,
                 thinking=thinking,
                 audio_duration=audio_duration,
                 bpm=bpm,
@@ -103,32 +123,57 @@ def run_generation_task(
                 inference_steps=inference_steps,
                 batch_size=batch_size,
             )
-            audio_bytes, replicate_r2_url = generate_music_via_api(api_params, progress_cb=report)
-            # API returns audio in the requested format (MP3, WAV, etc.)
-            # For MusicGenResult, we use wav_bytes field but it can contain any audio format
-            res_bpm = bpm if bpm else 120  # Use provided BPM or default
-            res = MusicGenResult(wav_bytes=audio_bytes, bpm=res_bpm)
-        except AceStepApiError as e:
-            print(f"[music_generation] ACE-Step API failed: {e}, falling back to local inference", flush=True)
-            # Fallback to local inference if API fails
-            if mode == "custom" and effective_prompt:
-                report(15, "fallback: loading local model")
-                report(25, "fallback: generating")
-                res = generate_music(prompt=effective_prompt, lyrics=lyrics, duration=audio_duration, progress_cb=report)
-            elif mode == "simple" and sample_query:
-                report(15, "fallback: loading local model")
-                report(25, "fallback: generating")
-                # Use sample_query as prompt for simple mode fallback
-                fallback_lyrics = "[Instrumental]" if instrumental else None
-                res = generate_music(prompt=sample_query, lyrics=fallback_lyrics, duration=audio_duration, progress_cb=report)
-            else:
-                raise RuntimeError(f"Cannot fallback: mode={mode}, prompt={prompt}, sample_query={sample_query}") from e
+            audio_future = executor.submit(generate_music_via_api, api_params, audio_progress_cb)
 
-        update_task(task_id, status="running", progress=60, message="uploading audio")
-        print(f"[music_generation] Audio generation completed, uploading audio...", flush=True)
+            # Submit cover image generation task
+            cover_future = executor.submit(
+                generate_cover_image,
+                prompt=cover_prompt,
+                title=title,
+                progress_cb=cover_progress_cb
+            )
 
-        # Use R2 URL directly from Replicate (already uploaded in ace_step_api_service)
-        # Fallback/local path still goes through store_bytes()
+            # Wait for audio generation result
+            try:
+                audio_bytes, replicate_r2_url = audio_future.result()
+                print(f"[music_generation] Audio generation completed", flush=True)
+                res_bpm = bpm if bpm else 120
+                res = MusicGenResult(wav_bytes=audio_bytes, bpm=res_bpm)
+            except AceStepApiError as e:
+                print(f"[music_generation] ACE-Step API failed: {e}, falling back to local inference", flush=True)
+                # Fallback to local inference
+                if mode == "custom" and effective_prompt:
+                    report(15, "fallback: loading local model")
+                    report(25, "fallback: generating")
+                    res = generate_music(prompt=effective_prompt, o3ics=o3ics, duration=audio_duration, progress_cb=audio_progress_cb)
+                elif mode == "simple" and sample_query:
+                    report(15, "fallback: loading local model")
+                    report(25, "fallback: generating")
+                    fallback_o3ics = "[Instrumental]" if instrumental else None
+                    res = generate_music(prompt=sample_query, o3ics=fallback_o3ics, duration=audio_duration, progress_cb=audio_progress_cb)
+                else:
+                    raise RuntimeError(f"Cannot fallback: mode={mode}, prompt={prompt}, sample_query={sample_query}") from e
+
+            # Wait for cover image generation result
+            try:
+                cover_res = cover_future.result()
+                print(f"[music_generation] Cover image generation completed, size: {len(cover_res.image_bytes)} bytes", flush=True)
+            except FluxNotInstalledError as e:
+                error_msg = str(e).strip() if str(e) else "FLUX.1 Schnell is not available or not properly configured"
+                if not error_msg:
+                    error_msg = "FLUX.1 Schnell is not available or not properly configured"
+                print(f"[music_generation] FLUX.1 Schnell not available, skipping cover image: {error_msg}", flush=True)
+                cover_image_error = error_msg
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}" if str(e) else f"{type(e).__name__}: Unknown error occurred"
+                if not error_msg or error_msg == ": ":
+                    error_msg = f"Cover image generation failed: {type(e).__name__}"
+                print(f"[music_generation] Error generating cover image: {error_msg}", flush=True)
+                cover_image_error = error_msg
+
+        # Upload audio
+        update_task(task_id, status="running", progress=85, message="uploading audio")
+        print(f"[music_generation] Uploading audio...", flush=True)
         if replicate_r2_url is not None:
             stored_url = replicate_r2_url
             print(f"[music_generation] Audio already on R2: {stored_url}", flush=True)
@@ -139,43 +184,14 @@ def run_generation_task(
             stored_url = stored.url
             print(f"[music_generation] Audio uploaded successfully: {stored_url}", flush=True)
 
-        # Generate cover image
+        # Upload cover image if generated
         cover_image_url = None
-        cover_image_error = None
-        # Use appropriate prompt for cover image
-        cover_prompt = (caption or prompt) if mode == "custom" else (sample_query or "Generated music")
-        print(f"[music_generation] ========== STARTING COVER IMAGE GENERATION ==========", flush=True)
-        print(f"[music_generation] Starting cover image generation...", flush=True)
-        print(f"[music_generation] Cover prompt: '{cover_prompt[:100] if cover_prompt else 'N/A'}...'", flush=True)
-        print(f"[music_generation] Cover title: '{title}'", flush=True)
-        try:
-            report(65, "generating cover image")
-            print(f"[music_generation] Calling generate_cover_image...", flush=True)
-            print(f"[music_generation] About to call generate_cover_image with prompt='{cover_prompt[:50]}...', title='{title}'", flush=True)
-            cover_res = generate_cover_image(prompt=cover_prompt, title=title, progress_cb=lambda p, m: report(65 + int(p * 0.15), m))
-            print(f"[music_generation] generate_cover_image returned successfully", flush=True)
-            print(f"[music_generation] Cover image generated successfully, size: {len(cover_res.image_bytes)} bytes", flush=True)
-            report(80, "uploading cover image")
+        if cover_res is not None:
+            report(85, "uploading cover image")
+            print(f"[music_generation] Uploading cover image...", flush=True)
             cover_stored = get_storage().store_bytes(content=cover_res.image_bytes, suffix=".png", content_type="image/png", folder=f"image/{date.today().isoformat()}")
             cover_image_url = cover_stored.url
             print(f"[music_generation] Cover image uploaded: {cover_image_url}", flush=True)
-        except FluxNotInstalledError as e:
-            error_msg = str(e).strip() if str(e) else "FLUX.1 Schnell is not available or not properly configured"
-            if not error_msg:
-                error_msg = "FLUX.1 Schnell is not available or not properly configured"
-            print(f"[music_generation] FLUX.1 Schnell not available, skipping cover image: {error_msg}", flush=True)
-            import traceback
-            print(f"[music_generation] Traceback: {traceback.format_exc()}", flush=True)
-            cover_image_error = error_msg
-        except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}" if str(e) else f"{type(e).__name__}: Unknown error occurred"
-            if not error_msg or error_msg == ": ":
-                error_msg = f"Cover image generation failed: {type(e).__name__}"
-            print(f"[music_generation] Error generating cover image: {error_msg}", flush=True)
-            import traceback
-            print(f"[music_generation] Traceback: {traceback.format_exc()}", flush=True)
-            cover_image_error = error_msg
-            # Continue without cover image if generation fails
 
         update_task(task_id, status="running", progress=90, message="saving")
         with Session(engine) as db:
@@ -185,7 +201,7 @@ def run_generation_task(
                 user_id=UUID(user_id),
                 title=title or "Generated",
                 prompt=song_prompt,
-                lyrics=lyrics,
+                o3ics=o3ics,
                 duration=audio_duration,
                 bpm=res.bpm,
                 audio_url=stored_url,
@@ -223,5 +239,3 @@ def run_generation_task(
         print(f"[music_generation] ========================================", flush=True)
         update_task(task_id, status="failed", progress=100, message=str(e), result=None)
         raise
-
-
