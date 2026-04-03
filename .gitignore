@@ -26,7 +26,8 @@ backend/.data/
 *.pth
 *.pkl
 
-# Audio/Media output files
+# Generated images
+image/
 backend/acestepapp/output/
 *.mp3
 *.wav
