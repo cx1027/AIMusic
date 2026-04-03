@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import { Play, Share2, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import DetailPlayer from "../components/player/DetailPlayer";
@@ -20,6 +20,7 @@ type SongDetailData = {
   play_count: number;
   like_count: number;
   liked_by_me?: boolean;
+  share_slug?: string | null;
   created_at: string;
 };
 
@@ -29,6 +30,8 @@ export default function SongDetail() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!songId) return;
@@ -157,6 +160,27 @@ export default function SongDetail() {
     );
   };
 
+  const handleShare = async () => {
+    if (!song || shareLoading) return;
+    setShareLoading(true);
+    try {
+      let slug = song.share_slug;
+      if (!slug) {
+        const result = await api.publishTrackShare(song.id, true);
+        slug = result.slug;
+        setSong((prev) => prev ? { ...prev, share_slug: slug! } : prev);
+      }
+      const shareUrl = `${window.location.origin}/share/track/${encodeURIComponent(slug!)}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e: any) {
+      setError(e?.message || "Failed to share");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       {loading && <div className="text-gray-300">Loading…</div>}
@@ -182,12 +206,30 @@ export default function SongDetail() {
                 <button
                   type="button"
                   onClick={handlePlay}
-                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
                 >
                   <Play className="h-4 w-4" />
                   Play
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={shareLoading}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-60"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-400" />
+                    <span className="text-green-400">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4" />
+                    <span>{shareLoading ? "Sharing…" : "Share"}</span>
+                  </>
+                )}
+              </button>
               <div className="mt-6 flex gap-6 text-xs text-gray-400">
                 <div>
                   <div className="font-medium text-gray-200">Plays</div>

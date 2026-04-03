@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from secrets import token_urlsafe
 from uuid import UUID
 
 from sqlmodel import Session
@@ -19,6 +20,10 @@ from app.services.storage_service import get_storage
 from app.worker import celery_app
 
 
+def _make_share_slug() -> str:
+    return token_urlsafe(10)
+
+
 @celery_app.task(name="music_generation.run")
 def run_generation_task(
     *,
@@ -28,7 +33,7 @@ def run_generation_task(
     caption: str | None = None,
     prompt: str | None = None,
     sample_query: str | None = None,
-    o3ics: str | None = None,
+    lyrics: str | None = None,
     audio_duration: int = 60,
     thinking: bool = True,
     bpm: int | None = None,
@@ -115,7 +120,7 @@ def run_generation_task(
                 mode=mode,
                 sample_query=sample_query,
                 prompt=effective_prompt,
-                o3ics=o3ics,
+                lyrics=lyrics,
                 thinking=thinking,
                 audio_duration=audio_duration,
                 bpm=bpm,
@@ -123,7 +128,11 @@ def run_generation_task(
                 inference_steps=inference_steps,
                 batch_size=batch_size,
             )
-            audio_future = executor.submit(generate_music_via_api, api_params, audio_progress_cb)
+            audio_future = executor.submit(
+                generate_music_via_api,
+                api_params,
+                progress_cb=audio_progress_cb,
+            )
 
             # Submit cover image generation task
             cover_future = executor.submit(
@@ -145,12 +154,12 @@ def run_generation_task(
                 if mode == "custom" and effective_prompt:
                     report(15, "fallback: loading local model")
                     report(25, "fallback: generating")
-                    res = generate_music(prompt=effective_prompt, o3ics=o3ics, duration=audio_duration, progress_cb=audio_progress_cb)
+                    res = generate_music(prompt=effective_prompt, lyrics=lyrics, duration=audio_duration, progress_cb=audio_progress_cb)
                 elif mode == "simple" and sample_query:
                     report(15, "fallback: loading local model")
                     report(25, "fallback: generating")
-                    fallback_o3ics = "[Instrumental]" if instrumental else None
-                    res = generate_music(prompt=sample_query, o3ics=fallback_o3ics, duration=audio_duration, progress_cb=audio_progress_cb)
+                    fallback_lyrics = "[Instrumental]" if instrumental else None
+                    res = generate_music(prompt=sample_query, lyrics=fallback_lyrics, duration=audio_duration, progress_cb=audio_progress_cb)
                 else:
                     raise RuntimeError(f"Cannot fallback: mode={mode}, prompt={prompt}, sample_query={sample_query}") from e
 
@@ -201,12 +210,14 @@ def run_generation_task(
                 user_id=UUID(user_id),
                 title=title or "Generated",
                 prompt=song_prompt,
-                o3ics=o3ics,
+                lyrics=lyrics,
                 duration=audio_duration,
                 bpm=res.bpm,
                 audio_url=stored_url,
                 cover_image_url=cover_image_url,
                 genre=genre,
+                share_slug=_make_share_slug(),
+                is_public_share=False,
             )
             db.add(song)
             db.commit()

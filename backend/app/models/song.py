@@ -36,6 +36,9 @@ class Song(SQLModel, table=True):
     play_count: int = Field(default=0)
     like_count: int = Field(default=0)
 
+    share_slug: Optional[str] = Field(default=None, index=True, unique=True)
+    is_public_share: bool = Field(default=False)
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Relationship - using ClassVar to prevent SQLModel from treating it as a column
@@ -70,6 +73,8 @@ class SongPublic(SQLModel):
     is_public: bool
     play_count: int
     like_count: int
+    share_slug: Optional[str] = None
+    is_public_share: bool = False
     created_at: datetime
 
     # Request-scoped flags (populated in API layer, default False for type safety)

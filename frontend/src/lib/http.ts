@@ -1,6 +1,6 @@
 import { clearTokens, getAccessToken, setTokens } from "./auth";
 
-export const API_BASE = (import.meta.env.VITE_API_BASE || "http://localhost:8000").replace(/\/$/, "");
+export const API_BASE = (import.meta.env.VITE_API_BASE || "https://your-backend.railway.app").replace(/\/$/, "");
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 

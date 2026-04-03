@@ -288,6 +288,20 @@ export const api = {
     http<{ song_id: string; play_count: number }>(`/api/songs/${songId}/play`, {
       method: "POST"
     }),
+  // ── Track sharing ──────────────────────────────────────────────────────
+  publishTrackShare: (songId: string, isPublic: boolean = true) =>
+    authedHttp<{ slug: string; share_url: string; is_public: boolean; expires_at: string | null }>(
+      `/api/track-shares/publish`,
+      {
+        method: "POST",
+        body: JSON.stringify({ song_id: songId, is_public: isPublic }),
+      }
+    ),
+  revokeTrackShare: (slug: string) =>
+    authedHttp<{ slug: string; revoked: boolean }>(
+      `/api/track-shares/${encodeURIComponent(slug)}/revoke`,
+      { method: "POST" }
+    ),
 };
 
 

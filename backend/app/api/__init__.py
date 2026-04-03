@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from . import auth, discover, generate, music, playlists, shares, songs, subscriptions, users, wechat
-from .routes import files
+from .routes import files, track_shares
 
 api_router = APIRouter()
 
@@ -12,6 +12,7 @@ api_router.include_router(generate.router, prefix="/generate", tags=["generate"]
 api_router.include_router(music.router, prefix="/music", tags=["music"])
 api_router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 api_router.include_router(shares.router, prefix="/shares", tags=["shares"])
+api_router.include_router(track_shares.router, prefix="/track-shares", tags=["track-shares"])
 api_router.include_router(discover.router, prefix="/discover", tags=["discover"])
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
 api_router.include_router(files.router, prefix="/files", tags=["files"])

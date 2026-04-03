@@ -37,6 +37,7 @@ def run_migrations():
         "migrate_add_details_column",
         "migrate_add_background_url_column",
         "migrate_update_credits_to_1000",
+        "migrate_add_track_share_slug",
     ]
 
     for migration_name in migrations:
