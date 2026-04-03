@@ -12,6 +12,41 @@ interface SharePlayerProps {
   slug: string;
 }
 
+/** Downsample decoded audio to one merged (max L/R) envelope so WaveSurfer draws a single row. */
+async function computeMonoPeaks(
+  audioUrl: string,
+  barCount = 800
+): Promise<{ peaks: Float32Array; duration: number }> {
+  const res = await fetch(audioUrl, { mode: "cors" });
+  if (!res.ok) throw new Error(`fetch audio failed: ${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+  const ctx = new AudioContext();
+  try {
+    const audioBuf = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    const duration = audioBuf.duration;
+    const len = audioBuf.length;
+    const nCh = audioBuf.numberOfChannels;
+    const ch0 = audioBuf.getChannelData(0);
+    const ch1 = nCh > 1 ? audioBuf.getChannelData(1) : null;
+    const peaks = new Float32Array(barCount);
+    const samplesPerBar = len / barCount;
+    for (let i = 0; i < barCount; i++) {
+      const start = Math.floor(i * samplesPerBar);
+      const end = Math.min(Math.floor((i + 1) * samplesPerBar), len);
+      let max = 0;
+      for (let s = start; s < end; s++) {
+        let v = Math.abs(ch0[s]);
+        if (ch1) v = Math.max(v, Math.abs(ch1[s]));
+        if (v > max) max = v;
+      }
+      peaks[i] = max;
+    }
+    return { peaks, duration };
+  } finally {
+    await ctx.close().catch(() => {});
+  }
+}
+
 export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const waveformRef = useRef<HTMLDivElement | null>(null);
@@ -20,7 +55,6 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0); // 0-1
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(false);
@@ -30,14 +64,29 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
   useEffect(() => {
     if (!resolvedUrl || typeof window === "undefined") return;
 
-    let wavesurfer: any = null;
+    let cancelled = false;
+    const instanceRef: { current: any } = { current: null };
 
     async function initWaveSurfer() {
       try {
         const WaveSurfer = (await import("wavesurfer.js")).default;
 
-        wavesurfer = WaveSurfer.create({
-          container: waveformRef.current!,
+        let peaks: Float32Array;
+        let dur: number;
+        try {
+          const out = await computeMonoPeaks(resolvedUrl);
+          peaks = out.peaks;
+          dur = out.duration;
+        } catch (e) {
+          console.warn("[SharePlayer] mono peaks failed, falling back to decode in WaveSurfer:", e);
+          peaks = new Float32Array(0);
+          dur = 0;
+        }
+
+        if (cancelled || !waveformRef.current) return;
+
+        const wavesurfer = WaveSurfer.create({
+          container: waveformRef.current,
           waveColor: "rgba(255,255,255,0.2)",
           progressColor: "#ec4899",
           cursorColor: "rgba(255,255,255,0.5)",
@@ -50,6 +99,7 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
         });
 
         wavesurfer.on("ready", () => {
+          if (cancelled) return;
           setLoading(false);
           setDuration(wavesurfer.getDuration());
         });
@@ -66,20 +116,29 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
 
         wavesurfer.on("audioprocess", (time: number) => {
           setCurrentTime(time);
-          if (wavesurfer.getDuration()) {
-            setProgress(wavesurfer.getCurrentTime() / wavesurfer.getDuration());
-          }
         });
 
         wavesurfer.on("seeking", (time: number) => {
           setCurrentTime(time);
         });
 
-        wavesurfer.load(resolvedUrl);
+        instanceRef.current = wavesurfer;
+
+        if (peaks.length > 0 && dur > 0) {
+          await wavesurfer.load(resolvedUrl, [peaks], dur);
+        } else {
+          await wavesurfer.load(resolvedUrl);
+        }
+
+        if (cancelled) {
+          wavesurfer.destroy();
+          instanceRef.current = null;
+          wavesurferRef.current = null;
+          return;
+        }
         wavesurferRef.current = wavesurfer;
       } catch (err) {
         console.error("Failed to load WaveSurfer:", err);
-        // Fallback: use native <audio> element
         setLoading(false);
         setError(null);
       }
@@ -88,25 +147,23 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
     void initWaveSurfer();
 
     return () => {
-      if (wavesurfer) {
-        wavesurfer.destroy();
-        wavesurferRef.current = null;
-      }
+      cancelled = true;
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
+      wavesurferRef.current = null;
     };
   }, [resolvedUrl]);
 
   const togglePlay = useCallback(() => {
     if (!wavesurferRef.current) {
-      // Fallback: use native audio
       if (!audioRef.current) {
         audioRef.current = new Audio(resolvedUrl!);
         audioRef.current.addEventListener("timeupdate", () => {
           setCurrentTime(audioRef.current!.currentTime);
-          if (audioRef.current!.duration) {
-            setProgress(audioRef.current!.currentTime / audioRef.current!.duration);
-          }
         });
-        audioRef.current.addEventListener("ended", () => { setIsPlaying(false); });
+        audioRef.current.addEventListener("ended", () => {
+          setIsPlaying(false);
+        });
         audioRef.current.addEventListener("loadedmetadata", () => {
           setDuration(audioRef.current!.duration);
           setLoading(false);
@@ -132,33 +189,35 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
     setMuted(!muted);
   }, [muted]);
 
-  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!waveformRef.current) return;
-    const rect = waveformRef.current.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const handleSeek = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!waveformRef.current) return;
+      const rect = waveformRef.current.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 
-    if (wavesurferRef.current) {
-      wavesurferRef.current.seekTo(ratio);
-    } else if (audioRef.current && duration) {
-      audioRef.current.currentTime = ratio * duration;
-      setProgress(ratio);
-    }
-  }, [duration]);
+      if (wavesurferRef.current) {
+        wavesurferRef.current.seekTo(ratio);
+      } else if (audioRef.current && duration) {
+        audioRef.current.currentTime = ratio * duration;
+      }
+    },
+    [duration]
+  );
 
   const formatTime = (t: number) => {
     if (!Number.isFinite(t) || t < 0) return "0:00";
     const m = Math.floor(t / 60);
-    const s = Math.floor(t % 60).toString().padStart(2, "0");
+    const s = Math.floor(t % 60)
+      .toString()
+      .padStart(2, "0");
     return `${m}:${s}`;
   };
 
   return (
     <div className={styles.player}>
-      {/* Hidden native audio for fallback */}
-      <audio ref={audioRef} src={resolvedUrl || undefined} preload="metadata" />
+      <audio ref={audioRef} preload="none" />
 
       <div className={styles.controls}>
-        {/* Play/Pause */}
         <button
           type="button"
           onClick={togglePlay}
@@ -175,28 +234,14 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
           )}
         </button>
 
-        {/* Time + Waveform */}
         <div className={styles.waveWrapper}>
           <div className={styles.timeRow}>
             <span className={styles.time}>{formatTime(currentTime)}</span>
-            <div
-              ref={waveformRef}
-              className={styles.waveform}
-              onClick={handleSeek}
-            />
+            <div ref={waveformRef} className={styles.waveform} onClick={handleSeek} />
             <span className={styles.time}>{formatTime(duration)}</span>
-          </div>
-
-          {/* Progress bar */}
-          <div className={styles.progressTrack} onClick={handleSeek}>
-            <div
-              className={styles.progressFill}
-              style={{ width: `${progress * 100}%` }}
-            />
           </div>
         </div>
 
-        {/* Mute */}
         <button
           type="button"
           onClick={handleMute}
@@ -213,7 +258,6 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
         <p className={styles.noAudio}>No audio available for this track.</p>
       )}
 
-      {/* CTA */}
       <div className={styles.cta}>
         <a href="/" className={styles.ctaButton}>
           Create Your Own Music

@@ -306,21 +306,6 @@
   position: relative;
 }
 
-.SharePlayer_progressTrack__UNa5A {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.SharePlayer_progressFill__89dOi {
-  height: 100%;
-  background: #ec4899;
-  border-radius: 9999px;
-  transition: width 0.1s linear;
-}
-
 .SharePlayer_muteButton__AjcqJ {
   flex-shrink: 0;
   width: 36px;

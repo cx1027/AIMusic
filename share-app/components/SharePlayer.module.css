@@ -74,21 +74,6 @@
   position: relative;
 }
 
-.progressTrack {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: #ec4899;
-  border-radius: 9999px;
-  transition: width 0.1s linear;
-}
-
 .muteButton {
   flex-shrink: 0;
   width: 36px;
