@@ -5,6 +5,7 @@ This script is intended to run on Railway service startup.
 It creates tables if they don't exist and runs all migration scripts.
 """
 
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -43,7 +44,7 @@ def run_migrations():
     for migration_name in migrations:
         try:
             logger.info(f"Running migration: {migration_name}")
-            module = __import__(migration_name)
+            module = importlib.import_module(migration_name)
             migration_func = getattr(module, "migrate", None)
             if migration_func and callable(migration_func):
                 migration_func()
@@ -51,7 +52,9 @@ def run_migrations():
                 logger.warning(f"Migration {migration_name} has no migrate() function, skipping")
         except Exception as e:
             logger.error(f"Migration {migration_name} failed: {e}")
-            # Continue with other migrations instead of failing completely
+            # Fail the startup so missing columns are never silently ignored.
+            # A failed migration means the app is in an inconsistent state.
+            raise
 
 
 def main():
