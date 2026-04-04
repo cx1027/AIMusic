@@ -30,15 +30,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     track = await fetchShareData(slug);
   } catch {
     return {
-      title: "AI Music — Share",
-      description: "Listen to AI-generated music on AIMusic",
+      title: "Melodrift — Share",
+      description: "Listen to AI-generated music on Melodrift",
     };
   }
 
   const title = track.title || "Untitled AI Song";
   const description = track.prompt
-    ? `${track.prompt.slice(0, 160)} — Created with AIMusic AI`
-    : `An AI-generated song created with AIMusic — ${track.genre ? track.genre + " · " : ""}${track.duration}s`;
+    ? `${track.prompt.slice(0, 160)} — Created with Melodrift AI`
+    : `An AI-generated song created with Melodrift — ${track.genre ? track.genre + " · " : ""}${track.duration}s`;
   const imageUrl = track.cover_image_url || undefined;
   const audioUrl = track.audio_url || undefined;
 
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: imageUrl ? [{ url: imageUrl, width: 1024, height: 1024 }] : [],
       audio: audioUrl ? [{ url: audioUrl, type: "audio/mpeg" }] : [],
-      siteName: "AIMusic",
+      siteName: "Melodrift",
     },
     twitter: {
       card: imageUrl ? "summary_large_image" : "summary",
@@ -118,9 +118,9 @@ export default async function ShareTrackPage({ params }: PageProps) {
       <div className={styles.card}>
         {/* Header */}
         <div className={styles.header}>
-          <a href="/" className={styles.logo} aria-label="AIMusic Home">
+          <a href="/" className={styles.logo} aria-label="Melodrift Home">
             <span className={styles.logoIcon}>♪</span>
-            <span className={styles.logoText}>AIMusic</span>
+            <span className={styles.logoText}>Melodrift</span>
           </a>
         </div>
 
@@ -194,7 +194,7 @@ export default async function ShareTrackPage({ params }: PageProps) {
           <p className={styles.footerText}>
             Create your own AI music with{" "}
             <a href="/" className={styles.footerLink}>
-              AIMusic
+              Melodrift
             </a>
           </p>
         </div>
