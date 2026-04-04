@@ -150,12 +150,13 @@ export default async function ShareTrackPage({ params }: PageProps) {
 
             {/* Tags */}
             <div className={styles.tags}>
-              {track.genre && (
+              {track.genre && track.genre !== "-1" && (
                 <span className={styles.tag}>{track.genre}</span>
               )}
-              <span className={styles.tag}>{Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}</span>
-              {track.bpm && (
-                <span className={styles.tag}>{track.bpm} BPM</span>
+              {track.duration > 0 && (
+                <span className={styles.tag}>
+                  {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
+                </span>
               )}
               <span className={styles.tag}>▶ {track.play_count.toLocaleString()}</span>
             </div>
