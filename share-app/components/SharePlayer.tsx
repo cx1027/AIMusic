@@ -63,19 +63,21 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
   const resolvedUrl = resolveMediaUrl(audioUrl);
 
   useEffect(() => {
-    if (!resolvedUrl || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
     let cancelled = false;
     const instanceRef: { current: any } = { current: null };
 
     async function initWaveSurfer() {
+      const resolved = resolveMediaUrl(audioUrl);
+      if (!resolved) return;
       try {
         const WaveSurfer = (await import("wavesurfer.js")).default;
 
         let peaks: Float32Array;
         let dur: number;
         try {
-          const out = await computeMonoPeaks(resolvedUrl);
+          const out = await computeMonoPeaks(resolved);
           peaks = out.peaks;
           dur = out.duration;
         } catch (e) {
@@ -126,9 +128,9 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
         instanceRef.current = wavesurfer;
 
         if (peaks.length > 0 && dur > 0) {
-          await wavesurfer.load(resolvedUrl, [peaks], dur);
+          await wavesurfer.load(resolved, [peaks], dur);
         } else {
-          await wavesurfer.load(resolvedUrl);
+          await wavesurfer.load(resolved);
         }
 
         if (cancelled) {
@@ -153,12 +155,14 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
       instanceRef.current = null;
       wavesurferRef.current = null;
     };
-  }, [resolvedUrl]);
+  }, [audioUrl]);
 
   const togglePlay = useCallback(() => {
     if (!wavesurferRef.current) {
+      const resolved = resolveMediaUrl(audioUrl);
       if (!audioRef.current) {
-        audioRef.current = new Audio(resolvedUrl!);
+        if (!resolved) return;
+        audioRef.current = new Audio(resolved);
         audioRef.current.addEventListener("timeupdate", () => {
           setCurrentTime(audioRef.current!.currentTime);
         });
@@ -179,7 +183,7 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
       return;
     }
     wavesurferRef.current.playPause();
-  }, [isPlaying, resolvedUrl]);
+  }, [isPlaying, audioUrl]);
 
   const handleMute = useCallback(() => {
     if (wavesurferRef.current) {

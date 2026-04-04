@@ -1,0 +1,1 @@
+@tailwind base;@tailwind components;@tailwind utilities;:root{--background:#000;--foreground:#fff}html{color-scheme:dark}body{background:#000;color:#fff;font-family:system-ui,-apple-system,sans-serif}

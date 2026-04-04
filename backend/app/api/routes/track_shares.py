@@ -75,7 +75,7 @@ class RevalidateResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-NEXTJS_SHARE_URL = "https://your-domain.com"  # replace with actual Vercel URL
+NEXTJS_SHARE_URL = "https://share-app-zeta.vercel.app"  # replace with actual Vercel URL
 
 
 def _make_slug() -> str:

@@ -2,7 +2,7 @@
     "rewrites": [
       {
         "source": "/share/track/:slug*",
-        "destination": "https://your-share-app.vercel.app/share/track/:slug*"
+        "destination": "https://share-app-zeta.vercel.app/share/track/:slug*"
       },
       {
         "source": "/(.*)",
