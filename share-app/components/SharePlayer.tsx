@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { resolveMediaUrl } from "@/lib/api";
+import { APP_URL } from "@/lib/site";
 import styles from "./SharePlayer.module.css";
 
 interface SharePlayerProps {
@@ -259,7 +260,7 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
       )}
 
       <div className={styles.cta}>
-        <a href="/" className={styles.ctaButton}>
+        <a href={APP_URL} className={styles.ctaButton}>
           Create Your Own Music
         </a>
       </div>

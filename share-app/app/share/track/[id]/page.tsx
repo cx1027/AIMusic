@@ -11,6 +11,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { fetchShareData } from "@/lib/api";
+import { APP_URL } from "@/lib/site";
 import SharePlayer from "@/components/SharePlayer";
 import styles from "./page.module.css";
 
@@ -118,7 +119,7 @@ export default async function ShareTrackPage({ params }: PageProps) {
       <div className={styles.card}>
         {/* Header */}
         <div className={styles.header}>
-          <a href="/" className={styles.logo} aria-label="Melodrift Home">
+          <a href={APP_URL} className={styles.logo} aria-label="Melodrift Home">
             <span className={styles.logoIcon}>♪</span>
             <span className={styles.logoText}>Melodrift</span>
           </a>
@@ -193,7 +194,7 @@ export default async function ShareTrackPage({ params }: PageProps) {
         <div className={styles.footer}>
           <p className={styles.footerText}>
             Create your own AI music with{" "}
-            <a href="/" className={styles.footerLink}>
+            <a href={APP_URL} className={styles.footerLink}>
               Melodrift
             </a>
           </p>
