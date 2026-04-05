@@ -1,4 +1,0 @@
-{
-  "buildCommand": "cd ../ && npm install --prefix share-app && npm run build --prefix share-app",
-  "outputDirectory": "share-app/.next"
-}
