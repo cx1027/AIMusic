@@ -16,6 +16,7 @@ COPY app /app/app
 # Copy migration scripts and init_db.py
 COPY init_db.py /app/init_db.py
 COPY migrate_*.py /app/
+COPY railway_migrations.sql /app/railway_migrations.sql
 
 EXPOSE 8000
 

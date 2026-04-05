@@ -23,11 +23,12 @@ engine = create_engine(database_url, pool_pre_ping=True)
 def migrate() -> None:
     """Add the 'background_url' column to the users table if it doesn't exist."""
     with engine.connect() as conn:
+        conn.execute(text("COMMIT"))  # exit any open transaction before DDL
         inspector = inspect(engine)
         columns = [col["name"] for col in inspector.get_columns("users")]
 
         if "background_url" in columns:
-            print("✅ Column 'background_url' already exists in 'users' table.")
+            print("Column 'background_url' already exists in 'users' table.")
             return
 
         print("Adding 'background_url' column to 'users' table...")
@@ -40,7 +41,7 @@ def migrate() -> None:
             )
         )
         conn.commit()
-        print("✅ Successfully added 'background_url' column to 'users' table.")
+        print("Successfully added 'background_url' column to 'users' table.")
 
 
 if __name__ == "__main__":

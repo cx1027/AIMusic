@@ -22,22 +22,23 @@ engine = create_engine(database_url, pool_pre_ping=True)
 def migrate():
     """Add the 'details' column to the users table if it doesn't exist."""
     with engine.connect() as conn:
+        conn.execute(text("COMMIT"))  # exit any open transaction before DDL
         # Check if the column already exists
         inspector = inspect(engine)
         columns = [col['name'] for col in inspector.get_columns('users')]
-        
+
         if 'details' in columns:
-            print("✅ Column 'details' already exists in 'users' table.")
+            print("Column 'details' already exists in 'users' table.")
             return
-        
+
         # Add the column
         print("Adding 'details' column to 'users' table...")
         conn.execute(text("""
-            ALTER TABLE users 
+            ALTER TABLE users
             ADD COLUMN details TEXT DEFAULT ''
         """))
         conn.commit()
-        print("✅ Successfully added 'details' column to 'users' table.")
+        print("Successfully added 'details' column to 'users' table.")
 
 if __name__ == "__main__":
     migrate()

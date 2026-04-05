@@ -22,19 +22,20 @@ engine = create_engine(database_url, pool_pre_ping=True)
 def migrate():
     """Add unique constraint to the 'username' column in the users table."""
     with engine.connect() as conn:
+        conn.execute(text("COMMIT"))  # exit any open transaction before DDL
         inspector = inspect(engine)
-        
+
         # Check if unique constraint already exists
         unique_constraints = inspector.get_unique_constraints('users')
         username_unique_exists = any(
-            'username' in constraint['column_names'] 
+            'username' in constraint['column_names']
             for constraint in unique_constraints
         )
-        
+
         if username_unique_exists:
-            print("✅ Unique constraint on 'username' already exists in 'users' table.")
+            print("Unique constraint on 'username' already exists in 'users' table.")
             return
-        
+
         # Check for duplicate usernames before adding constraint
         print("Checking for duplicate usernames...")
         result = conn.execute(text("""
@@ -44,23 +45,22 @@ def migrate():
             HAVING COUNT(*) > 1
         """))
         duplicates = result.fetchall()
-        
+
         if duplicates:
-            print("⚠️  WARNING: Found duplicate usernames:")
+            print("WARNING: Found duplicate usernames:")
             for username, count in duplicates:
                 print(f"   - '{username}': {count} occurrences")
-            print("\nPlease resolve duplicates before adding unique constraint.")
-            print("You can update usernames manually or use a script to append numbers.")
+            print("Please resolve duplicates before adding unique constraint.")
             return
-        
+
         # Add the unique constraint
         print("Adding unique constraint to 'username' column in 'users' table...")
         conn.execute(text("""
-            ALTER TABLE users 
+            ALTER TABLE users
             ADD CONSTRAINT users_username_unique UNIQUE (username)
         """))
         conn.commit()
-        print("✅ Successfully added unique constraint to 'username' column in 'users' table.")
+        print("Successfully added unique constraint to 'username' column in 'users' table.")
 
 if __name__ == "__main__":
     migrate()

@@ -22,25 +22,26 @@ engine = create_engine(database_url, pool_pre_ping=True)
 def migrate():
     """Update all users' credits_balance to 1000."""
     with engine.connect() as conn:
+        conn.execute(text("COMMIT"))  # exit any open transaction before DML
         # Count users before update
         result = conn.execute(text("SELECT COUNT(*) FROM users"))
         user_count = result.scalar()
-        
+
         if user_count == 0:
             print("No users found in database. New users will get 1000 credits by default.")
             return
-        
+
         print(f"Found {user_count} user(s). Updating credits_balance to 1000...")
-        
+
         # Update all users to have 1000 credits
         result = conn.execute(text("""
-            UPDATE users 
+            UPDATE users
             SET credits_balance = 1000
         """))
         conn.commit()
-        
+
         updated_count = result.rowcount
-        print(f"✅ Successfully updated {updated_count} user(s) to have 1000 credits.")
+        print(f"Successfully updated {updated_count} user(s) to have 1000 credits.")
 
 if __name__ == "__main__":
     migrate()
