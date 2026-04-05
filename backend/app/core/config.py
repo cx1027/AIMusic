@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     huggingface_token: str = ""  # Hugging Face token for accessing gated models (FLUX.1-schnell) - set via HUGGINGFACE_TOKEN env var
     flux_runpod_endpoint_id: str = ""  # RunPod endpoint ID for FLUX.1 Schnell (e.g., vgsdku5vpadklr) - set via FLUX_RUNPOD_ENDPOINT_ID env var
 
+    # Vercel deployment URL for the Next.js share app
+    share_app_url: str = ""
+
     @field_validator("flux_schnell_provider", mode="before")
     @classmethod
     def normalize_flux_provider(cls, v: str) -> str:

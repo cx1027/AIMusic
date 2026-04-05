@@ -1,6 +1,7 @@
 import { clearTokens, getAccessToken, setTokens } from "./auth";
 
 export const API_BASE = (import.meta.env.VITE_API_BASE || "https://your-backend.railway.app").replace(/\/$/, "");
+export const SHARE_APP_URL = (import.meta.env.VITE_SHARE_APP_URL || "https://share-app-zeta.vercel.app").replace(/\/$/, "");
 
 type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 

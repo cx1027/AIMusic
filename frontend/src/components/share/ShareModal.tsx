@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { API_BASE } from "@/lib/http";
+import { API_BASE, SHARE_APP_URL } from "@/lib/http";
 import type { PublishShareResponse } from "@/api/shares";
 
 type Props = {
@@ -15,7 +15,7 @@ export default function ShareModal({ open, onOpenChange, fileObjectId }: Props) 
 
   const shareUrl = useMemo(() => {
     if (!share?.slug) return "";
-    const base = window.location.origin;
+    const base = SHARE_APP_URL;
     return `${base}/share/${encodeURIComponent(share.slug)}`;
   }, [share]);
 

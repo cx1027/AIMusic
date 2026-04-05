@@ -83,7 +83,7 @@ def _make_slug() -> str:
 
 
 def _build_share_url(slug: str) -> str:
-    domain = settings.cors_origins_list()[0] if settings.cors_origins_list() else "http://localhost:3000"
+    domain = settings.share_app_url or NEXTJS_SHARE_URL
     return f"{domain}/share/track/{slug}"
 
 

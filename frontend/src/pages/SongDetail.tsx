@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import DetailPlayer from "../components/player/DetailPlayer";
 import { api } from "../lib/api";
+import { SHARE_APP_URL } from "../lib/http";
 import { resolveMediaUrl } from "../lib/media";
 import { playerStore } from "../stores/playerStore";
 
@@ -165,12 +166,15 @@ export default function SongDetail() {
     setShareLoading(true);
     try {
       let slug = song.share_slug;
+      let shareUrl: string;
       if (!slug) {
         const result = await api.publishTrackShare(song.id, true);
         slug = result.slug;
+        shareUrl = result.share_url;
         setSong((prev) => prev ? { ...prev, share_slug: slug! } : prev);
+      } else {
+        shareUrl = `${SHARE_APP_URL}/share/track/${encodeURIComponent(slug!)}`;
       }
-      const shareUrl = `${window.location.origin}/share/track/${encodeURIComponent(slug!)}`;
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

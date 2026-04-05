@@ -4,7 +4,7 @@ import html2canvas from "html2canvas";
 import DetailPlayer from "@/components/player/DetailPlayer";
 import SharePoster from "@/components/share/SharePoster";
 import { getShare, type ResolvedShare } from "@/api/shares";
-import { API_BASE } from "@/lib/http";
+import { API_BASE, SHARE_APP_URL } from "@/lib/http";
 
 type WechatConfig = {
   appId: string;
@@ -37,7 +37,7 @@ export default function Share() {
   const shareUrl = useMemo(() => {
     if (!shareId) return window.location.href;
     const base = window.location.origin;
-    return `${base}/share/${encodeURIComponent(shareId)}`;
+    return `${SHARE_APP_URL}/share/${encodeURIComponent(shareId)}`;
   }, [shareId]);
 
   useEffect(() => {
