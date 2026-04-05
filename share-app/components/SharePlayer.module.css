@@ -69,6 +69,7 @@
 
 .waveform {
   flex: 1;
+  min-width: 0; /* allow flex child to shrink so the bar stays visible in narrow cards */
   height: 56px;
   cursor: pointer;
   position: relative;

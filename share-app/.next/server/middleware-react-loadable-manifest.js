@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST='{"components/SharePlayer.tsx -> wavesurfer.js":{"id":8546,"files":["static/chunks/546.5e40cf31993812b9.js"]}}';
+self.__REACT_LOADABLE_MANIFEST="{\"components/SharePlayer.tsx -> wavesurfer.js\":{\"id\":\"components/SharePlayer.tsx -> wavesurfer.js\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_wavesurfer_js_dist_wavesurfer_esm_js.js\"]}}"

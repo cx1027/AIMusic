@@ -1,5 +1,4 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/api/revalidate/route": "app/api/revalidate/route.js",
   "/share/track/[id]/page": "app/share/track/[id]/page.js"
 }

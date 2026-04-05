@@ -143,7 +143,11 @@ export default function SharePlayer({ audioUrl, title }: SharePlayerProps) {
       } catch (err) {
         console.error("Failed to load WaveSurfer:", err);
         setLoading(false);
-        setError(null);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Could not load audio (often blocked by CORS on R2 — allow your share domain in bucket CORS)."
+        );
       }
     }
 

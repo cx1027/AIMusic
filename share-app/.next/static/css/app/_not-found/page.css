@@ -1,0 +1,122 @@
+/*!********************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[7].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[7].use[3]!./app/not-found.module.css ***!
+  \********************************************************************************************************************************************************************************************************************************************************************/
+.not-found_container__PhdHT {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.not-found_bgOverlay__FxhCx {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(40px);
+          backdrop-filter: blur(40px);
+  z-index: 0;
+}
+
+.not-found_card__ts9w3 {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  padding: 2rem 1.5rem;
+  -webkit-backdrop-filter: blur(20px);
+          backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.not-found_header__jGpJl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.not-found_logo__FhkGj {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #fff;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.not-found_logo__FhkGj:hover {
+  opacity: 1;
+}
+
+.not-found_logoIcon__6Jfbq {
+  font-size: 1.5rem;
+}
+
+.not-found_logoText__JRvaO {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.not-found_body__sLyFD {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.not-found_icon__u61jq {
+  font-size: 3rem;
+  font-weight: 800;
+  color: rgba(236, 72, 153, 0.6);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.not-found_title__Vh7BH {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.not-found_desc__ZO_RD {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.not-found_footer__mD84W {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.not-found_ctaButton__3OvvP {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.not-found_ctaButton__3OvvP:hover {
+  opacity: 0.9;
+}
+
