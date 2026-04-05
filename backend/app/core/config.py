@@ -33,9 +33,10 @@ class Settings(BaseSettings):
     s3_bucket: str = ""
 
     # Music generation backend selection
-    # - celery: POST /api/generate (SSE events) -> Celery task
-    # - runpod: POST /api/music/generate + GET /api/music/status/{job_id} polling -> RunPod Serverless
-    music_generation_backend: str = "celery"  # celery | runpod
+    # - celery: POST /api/generate (SSE) -> Celery worker (or BackgroundTasks if FLUXSCHNELL=RUNPOD)
+    # - runpod: POST /api/music/generate + polling -> RunPod Serverless
+    # - replicate: POST /api/music/generate + polling -> ACE-Step on Replicate (BackgroundTasks, no RunPod)
+    music_generation_backend: str = "celery"  # celery | runpod | replicate
 
     # RunPod Serverless (https://api.runpod.ai/)
     runpod_api_key: str = ""

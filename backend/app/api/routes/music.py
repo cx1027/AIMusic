@@ -18,6 +18,7 @@ from app.services.image_gen_service import FluxNotInstalledError, download_image
 from app.services.progress_service import get_task, init_task, update_task
 from app.services.runpod_music_service import RunPodError, get_runpod_status, submit_runpod_job
 from app.services.storage_service import get_storage
+from app.tasks.music_generation import run_generation_task
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ def _require_runpod_enabled() -> None:
 
 @router.post("/generate", status_code=status.HTTP_201_CREATED)
 def music_generate(
+    background_tasks: BackgroundTasks,
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -188,6 +190,49 @@ def music_generate(
             "batch_size": batch_size_int,
         },
     )
+
+    s = get_settings()
+    backend = (s.music_generation_backend or "celery").lower()
+
+    # Replicate (ACE-Step): same pipeline as Celery task, runs in-process via BackgroundTasks (Railway-friendly).
+    if backend == "replicate":
+        update_task(
+            job_id,
+            status="running",
+            progress=5,
+            message="replicate: starting",
+            result={"generation_backend": "replicate"},
+        )
+        background_tasks.add_task(
+            run_generation_task,
+            task_id=job_id,
+            user_id=str(user.id),
+            title=title,
+            mode=mode,
+            caption=caption if mode == "custom" else None,
+            prompt=prompt if mode == "custom" else None,
+            sample_query=sample_query,
+            lyrics=lyrics,
+            audio_duration=audio_duration_int,
+            thinking=thinking,
+            instrumental=instrumental,
+            bpm=bpm_int if bpm_int else None,
+            vocal_language=vocal_language,
+            audio_format=audio_format,
+            inference_steps=inference_steps_int,
+            batch_size=batch_size_int,
+            genre=genre,
+        )
+        return {"job_id": job_id, "runpod_job_id": ""}
+
+    if backend != "runpod":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "MUSIC_GENERATION_BACKEND must be 'replicate' or 'runpod' for /api/music/generate. "
+                "For SSE generation use /api/generate with MUSIC_GENERATION_BACKEND=celery."
+            ),
+        )
 
     # Submit到 RunPod Serverless。
     # RunPod Job input 需遵循 Runpod_API_DOC.md：
@@ -478,6 +523,19 @@ def music_status(
         except Exception as e:
             print(f"[music_status] Error refreshing task state: {e}", flush=True)
         print(f"[music_status] Returning finalized state (fallback) - cover_image_url: {current_result.get('cover_image_url') if isinstance(current_result, dict) else 'N/A'}", flush=True)
+        return state
+
+    if current_status == "failed":
+        return state
+
+    # Replicate (BackgroundTasks): no RunPod IDs; task state is updated in Redis only.
+    if isinstance(current_result, dict) and current_result.get("generation_backend") == "replicate":
+        try:
+            refreshed = get_task(job_id)
+            if refreshed:
+                return refreshed
+        except Exception:
+            pass
         return state
 
     # Extract runpod job ids (only needed if not finalized)

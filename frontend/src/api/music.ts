@@ -18,7 +18,7 @@ export type MusicPollState = {
 };
 
 export function createMusicJob(payload: any) {
-  return authedHttp<{ job_id: string; runpod_job_id: string }>(`/api/music/generate`, {
+  return authedHttp<{ job_id: string; runpod_job_id?: string }>(`/api/music/generate`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

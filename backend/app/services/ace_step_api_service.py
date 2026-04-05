@@ -60,17 +60,23 @@ class AceStepApiError(RuntimeError):
 
 
 def _get_replicate_token() -> str:
-    """Get Replicate API token directly from backend/.env file and set it as env var."""
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    env_vars = dotenv_values(env_path)
-    token = env_vars.get("REPLICATE_API_TOKEN", "")
+    """Resolve Replicate API token: process env (Railway/Vercel) → Settings → .env file."""
+    token = (os.getenv("REPLICATE_API_TOKEN") or "").strip()
+    if not token:
+        from app.core.config import get_settings
+
+        token = (get_settings().replicate_api_token or "").strip()
+    if not token:
+        env_path = Path(__file__).parent.parent.parent / ".env"
+        env_vars = dotenv_values(env_path)
+        token = (env_vars.get("REPLICATE_API_TOKEN") or "").strip()
     if not token:
         raise AceStepApiError(
             "REPLICATE_API_TOKEN is required.\n"
-            "Set REPLICATE_API_TOKEN in your backend/.env file.\n"
+            "Set REPLICATE_API_TOKEN in Railway (or backend .env).\n"
             "Get your token from: https://replicate.com/account/api-tokens"
         )
-    # replicate.run() reads REPLICATE_API_TOKEN from env, not from replicate.api_token
+    # replicate.run() reads REPLICATE_API_TOKEN from env
     os.environ["REPLICATE_API_TOKEN"] = token
     return token
 
