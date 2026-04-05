@@ -1,13 +1,16 @@
 {
-    "rewrites": [
-      {
-        "source": "/share/track/:slug*",
-        "destination": "https://share-app-zeta.vercel.app/share/track/:slug*"
-      },
-      {
-        "source": "/(.*)",
-        "destination": "/index.html"
-      }
-    ]
-  }
-  
+  "rewrites": [
+    {
+      "source": "/_next/:path*",
+      "destination": "https://share-app-zeta.vercel.app/_next/:path*"
+    },
+    {
+      "source": "/share/track/:slug*",
+      "destination": "https://share-app-zeta.vercel.app/share/track/:slug*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
